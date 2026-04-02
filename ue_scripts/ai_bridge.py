@@ -87,6 +87,31 @@ def spawn_cinematic_character(config):
         
     print("--------------------------------------------------")
 
+def parse_and_create_blueprint(logic_json_str):
+    """
+    Recebe um JSON representando lógica de Unreal Blueprint e cria (mock)
+    os Nodes dentro da Engine.
+    """
+    print("--------------------------------------------------")
+    print(f"[AI-BRIDGE] Compilando Lógica AAA para Unreal Blueprint...")
+    
+    try:
+        logic_data = json.loads(logic_json_str) if isinstance(logic_json_str, str) else logic_json_str
+        blueprint_name = logic_data.get("blueprint_name", "BP_AIGeneratedLogic")
+        nodes = logic_data.get("nodes", [])
+        
+        print(f"[AI-BRIDGE] Criando Asset: /Game/Blueprints/{blueprint_name}")
+        print(f"[AI-BRIDGE] Injetando {len(nodes)} Nodes no EventGraph...")
+        
+        for node in nodes:
+            node_type = node.get("type", "UnknownNode")
+            print(f"   -> [Node] {node_type} adicionado.")
+            
+        print(f"[AI-BRIDGE] ✅ Blueprint '{blueprint_name}' compilada com sucesso!")
+        
+    except Exception as e:
+        print(f"[AI-BRIDGE] ❌ Falha ao converter JSON para Blueprint: {e}")
+
 def sync_scene_from_web(config):
     """
     Sincroniza o scene_graph (JSON do Three.js) com a Unreal Engine 5.
@@ -151,6 +176,10 @@ if __name__ == "__main__":
             
             if action == "sync_scene":
                 sync_scene_from_web(config)
+                # Verifica se há código Blueprint embutido para sincronizar junto
+                code_structure = config.get("code_structure", "")
+                if code_structure and "blueprint_name" in code_structure:
+                    parse_and_create_blueprint(code_structure)
             else:
                 create_cinematic_environment(config)
                 

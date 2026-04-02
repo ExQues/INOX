@@ -150,9 +150,14 @@ export const chatWithAi = async (req: CustomRequest, res: Response) => {
     // Extract the main file content if it exists to be injected directly
     let activeCode = '';
     if (response.code && Object.keys(response.code).length > 0) {
-      // Prioritize main.js or index.js, otherwise take the first file
-      const mainFile = Object.keys(response.code).find(f => f.includes('main') || f.includes('index'));
+      // Prioritize main.json (Blueprint) or main.js or index.js
+      const mainFile = Object.keys(response.code).find(f => f.includes('main.json') || f.includes('main') || f.includes('index'));
       activeCode = mainFile ? response.code[mainFile] : response.code[Object.keys(response.code)[0]];
+      
+      // If it's a JSON string, we might want to keep it as string for the editor
+      if (typeof activeCode === 'object') {
+        activeCode = JSON.stringify(activeCode, null, 2);
+      }
     }
 
     res.json({

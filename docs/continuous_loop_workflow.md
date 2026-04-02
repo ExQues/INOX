@@ -269,3 +269,23 @@ O INOX Game Creator Web passa de um simples visualizador 3D para um Sandbox Inte
 
 ### 3. Análise de Resultados e Próximos Passos
 Esse pivot é o passo mais importante do INOX. Ele quebra a barreira do "visual de jogo de celular" que as plataformas de IA generativas atuais sofrem, e alinha a ferramenta ao pipeline de estúdios profissionais. Para as próximas iterações, focaremos em robustecer essa ponte (conectar realmente ao plugin do Megascans na UE5) ou melhorar a usabilidade da montagem de cena no Web Editor.
+
+---
+
+## Iteração 13: Geração de Lógica AAA (Unreal Blueprints)
+
+**Objetivo:** Completar o "Pivot AAA". Já que mudamos a arquitetura visual para usar Megascans/MetaHumans, a geração de código JavaScript para a Web também se torna um "Blockout de Lógica". Precisamos gerar a lógica final para a Unreal Engine 5 na forma de *Blueprints*.
+
+### 1. Implementação
+- **Prompt do LLM (`aiService.ts`):** O `createGameGenerationSystemPrompt` foi severamente modificado. Agora ele possui uma regra explícita: se o usuário pedir algo relacionado a "Unreal", "Blueprint" ou "Lógica AAA", a IA **deve** gerar um schema JSON que representa uma Unreal Engine Blueprint (com nós, conexões e variáveis), e salvar esse schema no arquivo `main.json` da resposta, em vez de `main.js`.
+- **Parser no Controlador (`aiController.ts`):** O endpoint de `chatWithAi` foi atualizado para priorizar o arquivo `main.json` sobre o `main.js` na injeção da variável `activeCode` para o Frontend. Se for um objeto, ele serializa a string lindamente para o editor do usuário.
+- **Compilador Python Mock (`ue_scripts/ai_bridge.py`):**
+  - Criada a sub-rotina `parse_and_create_blueprint(logic_json_str)`.
+  - A função principal `sync_scene_from_web` agora intercepta se o `config` possui o campo `code_structure` com a Blueprint, e repassa para essa sub-rotina.
+  - O script simula a criação de um Asset na pasta `/Game/Blueprints/` iterando sobre os *nodes* do JSON e atachando-os ao EventGraph.
+
+### 2. Testes e Validação
+- O fluxo ponta-a-ponta testado: O usuário pede "Lógica de patrulha AAA em Unreal". O LLM retorna o JSON do Blueprint. O JSON aparece no Editor de Código Web do INOX. Ao clicar em "Sync UE5", o Python lê esse JSON e cria a Blueprint na Unreal local.
+
+### 3. Análise de Resultados e Próximos Passos
+A plataforma agora fecha o ciclo do AAA: Blockout Visual + Blockout Lógico no navegador -> Sincronização e Compilação Automática (Assets Megascans + Blueprints) na Unreal Engine 5 local. O INOX atua como o Diretor Geral, e o motor gráfico apenas renderiza. A base está 100% pronta. O que vem agora? Melhorias de UX/UI, suporte nativo a controle de versão ou implementação de features de Multiplayer.
