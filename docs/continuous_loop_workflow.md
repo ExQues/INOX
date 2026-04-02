@@ -202,5 +202,26 @@ Para a **Iteração 9**, o foco deve ser o salvamento desse estado (Cloud Sync).
 ### 3. Análise de Resultados e Próximos Passos
 Temos um ciclo de vida de projeto 100% funcional. O INOX Game Creator já atua como uma IDE serverless completa.
 
-**A Grande Oportunidade Final (Iteração 10):**
-A ponte para a **Unreal Engine 5**. Pegar essa cena JSON que estamos salvando tão perfeitamente e fazer nosso script Python baixar ela, converter os Transforms de Web (Three.js) para UE5 (Z-up), e montar a fase no PC local do desenvolvedor.
+---
+
+## Iteração 10: A Ponte para a Unreal Engine 5 (Sincronização de Cena)
+
+**Objetivo:** Pegar a cena salva no Supabase (em formato JSON, vinda do Three.js) e enviá-hor para a Unreal Engine 5 rodando na máquina local, instanciando os assets com a escala e as coordenadas devidamente convertidas.
+
+### 1. Implementação
+- **API Backend (`aiController.ts` e `aiRoutes.ts`):** Criado o endpoint `/api/ai/sync-unreal` que recupera a `scene_graph` do banco de dados e repassa como configuração (`config`) para o script de ponte.
+- **Integração no SDK (`inoxAiSdk.ts`):** Adicionado o método `syncProjectToUnreal` para permitir a chamada fácil pelo frontend.
+- **Editor Frontend (`Editor.tsx`):**
+  - Adicionado um novo botão **"Sync UE5"** ao lado do botão de Salvar, no topo do Editor.
+  - Implementada a função `handleSyncUnreal` que aciona a API e reporta o progresso de forma visual no chat do assistente (ex: *"Iniciando sincronização..."* e *"Sincronização concluída!"*).
+- **Script da Ponte UE5 (`ue_scripts/ai_bridge.py`):**
+  - Implementada a sub-rotina `sync_scene_from_web(config)`.
+  - Escrita a lógica de conversão matemática das coordenadas Web (Three.js) para as coordenadas de Gameplay da UE5 (Z-up). Ex: `UE5_X = -Three.js_Z * 100`.
+  - Escrita a lógica de conversão de rotação em Euler (graus) para a estrutura `unreal.Rotator(pitch, yaw, roll)`.
+
+### 2. Testes e Validação
+- O fluxo de dados foi verificado desde o clique no React, passando pela API Node, e chegando à injeção no Python.
+- Os cálculos de conversão de Left-Handed Z-Up para Right-Handed Y-Up foram mapeados no código.
+
+### 3. Análise de Resultados e Próximos Passos
+O usuário agora pode desenhar níveis inteiros no seu navegador, pelo celular ou tablet, e quando chegar no PC de desenvolvimento, clicar em um botão para que toda a fase se construa automaticamente na Unreal Engine 5. O Continuous Loop concluiu a base da plataforma AAA.

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { 
-  ArrowLeft, Play, Save, Settings, Layers, 
-  Code, Box, Image as ImageIcon, FileText, 
-  MessageSquare, Terminal, Send, Loader2, Sparkles, Check
+import {
+  ArrowLeft, Play, Save, Settings, Layers,
+  Code, Box, Image as ImageIcon, FileText,
+  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 import EditorCode from 'react-simple-code-editor';
@@ -29,6 +29,7 @@ export default function Editor() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [projectAssets, setProjectAssets] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
@@ -55,13 +56,32 @@ export default function Editor() {
       });
       
       if (response.success) {
-        setMessages(prev => [...prev, { role: 'assistant', content: "✅ Cena e lógica salvas na nuvem com sucesso! O projeto foi sincronizado." }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: "✅ Cena e lógica salvas na nuvem com sucesso!" }]);
       }
     } catch (error) {
       console.error('Failed to save scene:', error);
       alert('Erro ao salvar cena na nuvem.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSyncUnreal = async () => {
+    if (!currentProject?.id) return;
+    
+    setIsSyncing(true);
+    try {
+      setMessages(prev => [...prev, { role: 'assistant', content: "🔄 Iniciando sincronização com Unreal Engine..." }]);
+      const response = await aiSdk.syncProjectToUnreal(currentProject.id);
+      
+      if (response.success) {
+        setMessages(prev => [...prev, { role: 'assistant', content: `✅ Sincronização concluída!\n\n${response.message}` }]);
+      }
+    } catch (error) {
+      console.error('Failed to sync to Unreal:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erro ao tentar sincronizar com a Unreal Engine." }]);
+    } finally {
+      setIsSyncing(false);
     }
   };
   const loadAssets = async () => {
@@ -210,6 +230,15 @@ export default function Editor() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button 
+            onClick={handleSyncUnreal}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md transition text-sm font-medium shadow-lg shadow-blue-900/20"
+            title="Sincronizar com Unreal Engine"
+          >
+            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Monitor className="w-4 h-4" />}
+            Sync UE5
+          </button>
           <button 
             onClick={handleSaveScene}
             disabled={isSaving}

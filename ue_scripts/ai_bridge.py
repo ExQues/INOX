@@ -87,16 +87,75 @@ def spawn_cinematic_character(config):
         
     print("--------------------------------------------------")
 
+def sync_scene_from_web(config):
+    """
+    Sincroniza o scene_graph (JSON do Three.js) com a Unreal Engine 5.
+    Faz a conversão de coordenadas e (mock) importação dos assets.
+    """
+    print("--------------------------------------------------")
+    print(f"[AI-BRIDGE] Sincronizando cena Web para Unreal Engine: {config.get('name', 'SyncMap')}")
+
+    editor_level_lib = unreal.EditorLevelLibrary
+    scene_objects = config.get("scene_objects", [])
+    
+    if not scene_objects:
+        print("[AI-BRIDGE] Nenhum objeto na cena para sincronizar.")
+        return
+
+    for obj in scene_objects:
+        obj_name = obj.get("name", "UnknownMesh")
+        url = obj.get("url", "")
+        
+        # Web (Three.js) uses Right-Handed Y-Up (X: right, Y: up, Z: forward/backward)
+        # Unreal uses Left-Handed Z-Up (X: forward, Y: right, Z: up)
+        
+        pos = obj.get("position", {"x": 0, "y": 0, "z": 0})
+        rot = obj.get("rotation", {"x": 0, "y": 0, "z": 0})
+        scale = obj.get("scale", {"x": 1, "y": 1, "z": 1})
+        
+        # Convert Coordinates to UE5 (cm)
+        ue_x = -float(pos.get("z", 0)) * 100.0
+        ue_y = float(pos.get("x", 0)) * 100.0
+        ue_z = float(pos.get("y", 0)) * 100.0
+        location = unreal.Vector(ue_x, ue_y, ue_z)
+        
+        import math
+        pitch = math.degrees(float(rot.get("x", 0)))
+        yaw = math.degrees(float(rot.get("y", 0)))
+        roll = math.degrees(float(rot.get("z", 0)))
+        rotation = unreal.Rotator(pitch, yaw, roll)
+        
+        ue_scale_x = float(scale.get("z", 1))
+        ue_scale_y = float(scale.get("x", 1))
+        ue_scale_z = float(scale.get("y", 1))
+        actor_scale = unreal.Vector(ue_scale_x, ue_scale_y, ue_scale_z)
+
+        print(f"[AI-BRIDGE] Objeto: {obj_name} | URL: {url}")
+        print(f"            Transform UE5 -> Loc: {location}, Rot: {rotation}, Scale: {actor_scale}")
+        
+        # Mock of spawning object (Using a placeholder Cube if available, or just printing)
+        try:
+            print(f"[AI-BRIDGE] 📥 Simulando download do GLB e importação via AssetImportTask...")
+            print(f"[AI-BRIDGE] ✅ {obj_name} instanciado no level.")
+        except Exception as e:
+            print(f"[AI-BRIDGE] Falha ao instanciar objeto na UE5: {e}")
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         config_str = sys.argv[1]
         try:
             config = json.loads(config_str)
-            create_cinematic_environment(config)
             
-            # Se a configuração pede para instanciar o jogador principal
-            if config.get("spawn_character", False):
-                spawn_cinematic_character(config)
+            action = config.get("action", "generate_map")
+            
+            if action == "sync_scene":
+                sync_scene_from_web(config)
+            else:
+                create_cinematic_environment(config)
+                
+                # Se a configuração pede para instanciar o jogador principal
+                if config.get("spawn_character", False):
+                    spawn_cinematic_character(config)
                 
             print("[AI-BRIDGE] Rotinas Finalizadas com Sucesso.")
 

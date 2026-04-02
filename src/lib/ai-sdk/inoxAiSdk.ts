@@ -314,6 +314,13 @@ export class InoxAiSdk {
     });
   }
 
+  async syncProjectToUnreal(projectId: string): Promise<any> {
+    return this.request<any>('/api/ai/sync-unreal', {
+      method: 'POST',
+      body: JSON.stringify({ projectId }),
+    });
+  }
+
   async generateUnrealMap(prompt: string, density: string = 'high', timeOfDay: string = 'day'): Promise<any> {
     return this.request<any>('/api/ai/generate-unreal-map', {
       method: 'POST',

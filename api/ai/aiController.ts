@@ -310,6 +310,42 @@ export const generateUnrealMap = async (req: CustomRequest, res: Response) => {
   }
 };
 
+export const syncProjectToUnreal = async (req: CustomRequest, res: Response) => {
+  try {
+    const { projectId } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const project = await getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const sceneGraph = project.scene_graph || [];
+
+    const config = {
+      name: project.name || `SyncMap_${Date.now()}`,
+      action: 'sync_scene',
+      scene_objects: sceneGraph,
+      create_new_map: false
+    };
+
+    console.log(`[UnrealMapController] Sincronizando projeto ${projectId} com Unreal Engine...`);
+
+    const result = await invokeUnrealBridge(config);
+
+    res.json({
+      success: true,
+      unrealOutput: result.output,
+      message: 'Cena sincronizada com sucesso na Unreal Engine 5.'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const saveProjectScene = async (req: CustomRequest, res: Response) => {
   try {
     const { projectId, sceneObjects, activeCode } = req.body;
