@@ -24,6 +24,7 @@ export default function Editor() {
   // AI Assistant State
   const [chatMessage, setChatMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [projectAssets, setProjectAssets] = useState<any[]>([]);
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
@@ -36,6 +37,24 @@ export default function Editor() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Load project assets
+  const loadAssets = async () => {
+    if (currentProject?.id) {
+      try {
+        const response = await aiSdk.getProjectAssets(currentProject.id);
+        if (response.success) {
+          setProjectAssets(response.assets);
+        }
+      } catch (error) {
+        console.error('Failed to load assets:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadAssets();
+  }, [currentProject?.id]);
 
   // Handle Chat Submission
   const handleSendMessage = async () => {
@@ -73,6 +92,7 @@ export default function Editor() {
           if (result.status === 'completed' && result.modelUrl) {
             setActiveModelUrl(result.modelUrl);
             setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado, salvo na nuvem e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
+            loadAssets(); // Refresh assets list
           } else {
             setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao gerar o modelo 3D." }]);
           }
@@ -156,22 +176,38 @@ export default function Editor() {
         <aside className="w-14 sm:w-64 border-r border-slate-700/50 bg-slate-800/30 flex flex-col shrink-0 transition-all duration-300">
           <div className="p-3 border-b border-slate-700/50 flex items-center gap-3 hidden sm:flex">
             <Layers className="w-5 h-5 text-purple-400" />
-            <span className="font-semibold text-white">Assets</span>
+            <span className="font-semibold text-white">Assets do Projeto</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
             <div className="px-2 space-y-1">
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group">
-                <Box className="w-4 h-4 group-hover:text-purple-400" />
-                <span className="text-sm hidden sm:block">Modelos 3D</span>
-              </button>
+              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 px-3 tracking-wider hidden sm:block">Modelos 3D</div>
+              {projectAssets.filter(a => a.type === 'model').length > 0 ? (
+                projectAssets.filter(a => a.type === 'model').map((asset) => (
+                  <button 
+                    key={asset.id}
+                    onClick={() => setActiveModelUrl(asset.url)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group"
+                    title={asset.name}
+                  >
+                    <Box className="w-4 h-4 shrink-0 group-hover:text-purple-400" />
+                    <span className="text-sm truncate hidden sm:block">{asset.name}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-xs text-slate-500 italic hidden sm:block">Nenhum modelo gerado.</div>
+              )}
+              
+              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 mt-4 px-3 tracking-wider hidden sm:block">Texturas</div>
               <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group">
                 <ImageIcon className="w-4 h-4 group-hover:text-blue-400" />
-                <span className="text-sm hidden sm:block">Texturas</span>
+                <span className="text-sm hidden sm:block">Texturas Base</span>
               </button>
+              
+              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 mt-4 px-3 tracking-wider hidden sm:block">Scripts</div>
               <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group">
                 <FileText className="w-4 h-4 group-hover:text-green-400" />
-                <span className="text-sm hidden sm:block">Scripts</span>
+                <span className="text-sm hidden sm:block">Lógica (main.js)</span>
               </button>
             </div>
           </div>

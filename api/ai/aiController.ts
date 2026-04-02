@@ -301,6 +301,25 @@ export const generateUnrealMap = async (req: CustomRequest, res: Response) => {
   }
 };
 
+export const getProjectAssets = async (req: CustomRequest, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const assets = await getAssetsByProject(projectId);
+
+    res.json({
+      success: true,
+      assets: assets,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const generate3DModel = async (req: CustomRequest, res: Response) => {
   try {
     const { prompt, style, projectId } = req.body;
@@ -327,7 +346,7 @@ export const generate3DModel = async (req: CustomRequest, res: Response) => {
   }
 };
 
-import { downloadAndSaveGeneratedModel } from '../services/assetService.js';
+import { downloadAndSaveGeneratedModel, getAssetsByProject } from '../services/assetService.js';
 
 export const get3DModelStatus = async (req: CustomRequest, res: Response) => {
   try {

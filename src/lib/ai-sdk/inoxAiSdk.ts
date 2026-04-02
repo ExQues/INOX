@@ -108,6 +108,22 @@ export interface Get3DModelStatusResponse {
   thumbnailUrl?: string;
 }
 
+export interface GetProjectAssetsResponse {
+  success: boolean;
+  assets: Array<{
+    id: string;
+    projectId: string;
+    userId: string;
+    name: string;
+    type: string;
+    url: string;
+    thumbnailUrl?: string;
+    size: number;
+    tags: string[];
+    createdAt: string;
+  }>;
+}
+
 export interface DeployRequest {
   projectId: string;
   platform: 'web' | 'desktop' | 'mobile';
@@ -271,6 +287,12 @@ export class InoxAiSdk {
     }
 
     throw new Error('Build timeout');
+  }
+
+  async getProjectAssets(projectId: string): Promise<GetProjectAssetsResponse> {
+    return this.request<GetProjectAssetsResponse>(`/api/ai/assets/${projectId}`, {
+      method: 'GET',
+    });
   }
 
   async generateUnrealMap(prompt: string, density: string = 'high', timeOfDay: string = 'day'): Promise<any> {

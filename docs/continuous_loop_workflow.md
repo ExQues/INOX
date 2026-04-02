@@ -60,6 +60,31 @@ Para a **Iteração 3**, o foco deve mudar para conectar com o banco de dados.
 
 ### 3. Análise de Resultados e Próximos Passos
 Esta foi uma das iterações mais críticas para a visão de "Engine na Nuvem". Agora, a IA não gera arquivos descartáveis, ela efetivamente povoa a biblioteca de Assets do desenvolvedor.
-Para a **Iteração 4**, devemos focar em:
-1. **Painel de Assets no Frontend:** Fazer o componente da barra lateral esquerda do Editor (aba "Assets" / "Modelos 3D") consultar a rota `getAssetsByProject` e listar todos os modelos já gerados para que o usuário possa arrastar e soltá-los na cena quando quiser.
-2. **Integração com Unreal Engine:** A base de dados agora está pronta. O script Python (`ue_scripts/ai_bridge.py`) pode ser adaptado para consultar a tabela de assets do Supabase e fazer o download automático dos `.glb` diretos para o diretório `/Content` do projeto UE5.
+Para a **Iteração 4**, o foco deve ser UI e gerenciamento.
+
+---
+
+## Iteração 4: Painel Dinâmico de Assets no Frontend
+
+**Objetivo:** Permitir que o usuário visualize e reutilize os modelos 3D que foram salvos no Supabase diretamente no Editor.
+
+### 1. Implementação
+- **Criação de Endpoint de Listagem (`getProjectAssets`):** Criada a rota `GET /api/ai/assets/:projectId` no backend para buscar no banco de dados todos os assets (modelos 3D, texturas, scripts) pertencentes ao projeto ativo.
+- **Integração no SDK (`inoxAiSdk.ts`):** Adicionado o método `getProjectAssets` ao SDK React, junto com as tipagens corretas de retorno.
+- **Atualização do Estado (`useStore.ts`):** O `useStore` não precisou de alterações estruturais pois já suportava a aba de `activeModelUrl`.
+- **Refatoração da UI do Editor (`Editor.tsx`):**
+  - Implementado um hook `useEffect` que dispara `loadAssets()` assim que a página carrega ou o `currentProject` muda.
+  - A barra lateral esquerda (Painel de Assets) foi reescrita. Em vez de botões falsos, ela agora faz um `.map()` na lista real de assets do projeto (`projectAssets`).
+  - Cada botão de asset na barra lateral recebeu um evento de `onClick={() => setActiveModelUrl(asset.url)}`.
+- **Feedback Loop no Chat:** Ao final da geração bem-sucedida de um novo asset via chat, o front-end dispara `loadAssets()` automaticamente, fazendo o novo dragão/capacete aparecer na barra lateral instantaneamente, sem precisar recarregar a página.
+
+### 2. Testes e Validação
+- Os testes de compilação estática acusaram a falta de importação do `getAssetsByProject` no `aiController.ts`. O erro foi prontamente corrigido.
+- A UI se comporta de forma responsiva. Caso não haja assets, uma mensagem em itálico "Nenhum modelo gerado" é exibida de forma graciosa.
+
+### 3. Análise de Resultados e Próximos Passos
+A "ponte humana" está finalizada. O desenvolvedor consegue pedir para a IA gerar o modelo, a IA salva na nuvem, o modelo aparece na lista de assets, e o desenvolvedor clica nele para visualizar no Viewport3D a hora que quiser.
+
+**Possíveis focos para a Iteração 5:**
+1. **Integração Unreal Engine:** Adaptar o script Python para consultar essa mesma lista de assets do Supabase e realizar o "Sync" para a pasta do projeto UE5 físico.
+2. **Gerador de Lógica (Scripts):** Expandir a lógica do chat para que, ao invés de gerar um modelo 3D, ele consiga injetar scripts (JavaScript/Three.js) diretamente na aba "Código" do Editor, fazendo o cubo/modelo pular, atirar, etc.
