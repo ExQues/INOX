@@ -6,6 +6,7 @@ export interface GameConfig {
   features?: string[];
   aiPrompt?: string;
   templateId?: string;
+  model?: 'gpt-4' | 'gpt-3.5-turbo' | 'claude-3-opus' | 'claude-3-sonnet';
 }
 
 export interface ProjectResponse {

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Plus, Gamepad2, FolderOpen, Zap, Clock, TrendingUp } from 'lucide-react';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user, projects, setProjects, setCurrentProject, setLoading, setError } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -12,13 +14,26 @@ export default function Dashboard() {
   );
 
   const handleCreateNewProject = () => {
-    setCurrentProject(null);
+    // Generate a temporary new project or just open editor with null project (it will be created there)
+    // For now we'll set a mock "Novo Projeto" to allow Editor to render
+    const newProject = {
+      id: crypto.randomUUID(),
+      name: 'Novo Jogo',
+      platform: 'web' as const,
+      status: 'draft' as const,
+      code_structure: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    setCurrentProject(newProject);
+    navigate('/editor');
   };
 
   const handleOpenProject = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     if (project) {
       setCurrentProject(project);
+      navigate('/editor');
     }
   };
 

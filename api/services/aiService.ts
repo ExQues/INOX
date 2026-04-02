@@ -79,7 +79,8 @@ async function generateWithAnthropic(
     ],
   });
 
-  return response.content[0].text;
+  const textBlock = response.content.find(block => block.type === 'text');
+  return textBlock && 'text' in textBlock ? textBlock.text : '';
 }
 
 function createGameGenerationSystemPrompt(
