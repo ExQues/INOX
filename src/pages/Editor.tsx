@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
-  ArrowLeft, Play, Save, Settings, Layers,
+  ArrowLeft, Play, Square, Save, Settings, Layers,
   Code, Box, Image as ImageIcon, FileText,
   MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor
 } from 'lucide-react';
@@ -11,6 +11,8 @@ import EditorCode from 'react-simple-code-editor';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/themes/prism-tomorrow.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { createInoxAiSdk } from '../lib/ai-sdk/inoxAiSdk';
 
 // Inicializar SDK
@@ -21,7 +23,7 @@ const aiSdk = createInoxAiSdk({
 
 export default function Editor() {
   const navigate = useNavigate();
-  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject } = useStore();
+  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject, isPlaying, setIsPlaying } = useStore();
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
   
   // AI Assistant State
@@ -247,9 +249,16 @@ export default function Editor() {
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar
           </button>
-          <button className="flex items-center gap-2 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md transition text-sm font-medium shadow-lg shadow-green-900/20">
-            <Play className="w-4 h-4 fill-current" />
-            Play
+          <button 
+            onClick={() => setIsPlaying(!isPlaying)}
+            className={`flex items-center gap-2 px-4 py-1.5 text-white rounded-md transition text-sm font-medium shadow-lg ${
+              isPlaying 
+                ? 'bg-red-600 hover:bg-red-700 shadow-red-900/20' 
+                : 'bg-green-600 hover:bg-green-700 shadow-green-900/20'
+            }`}
+          >
+            {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+            {isPlaying ? 'Stop' : 'Play'}
           </button>
         </div>
       </header>
@@ -397,13 +406,19 @@ export default function Editor() {
                 className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div 
-                  className={`max-w-[85%] rounded-2xl p-3 text-sm shadow-md whitespace-pre-wrap ${
+                  className={`max-w-[85%] rounded-2xl p-3 text-sm shadow-md overflow-hidden ${
                     msg.role === 'user' 
-                      ? 'bg-purple-600 text-white rounded-tr-sm' 
-                      : 'bg-slate-700/50 text-slate-300 border border-slate-600/50 rounded-tl-sm'
+                      ? 'bg-purple-600 text-white rounded-tr-sm whitespace-pre-wrap' 
+                      : 'bg-slate-700/50 text-slate-300 border border-slate-600/50 rounded-tl-sm markdown-body'
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === 'user' ? (
+                    msg.content
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
                 <span className="text-[10px] text-slate-500 mt-1 px-1">
                   {msg.role === 'user' ? 'Você' : 'Assistente IA'}

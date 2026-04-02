@@ -28,10 +28,9 @@ export default function Viewport3D() {
   const userScriptRef = useRef<Function | null>(null);
   const engineContextRef = useRef<any>(null);
 
-  const { activeModelUrl, sceneObjects, activeCode, updateSceneObject } = useStore();
+  const { activeModelUrl, sceneObjects, activeCode, updateSceneObject, isPlaying, setIsPlaying } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
@@ -487,13 +486,13 @@ export default function Viewport3D() {
     }
   };
 
-  const togglePlay = () => {
-    if (isPlaying) {
+  // Sync global isPlaying state with simulation
+  useEffect(() => {
+    if (!isPlaying) {
       // Stop
-      setIsPlaying(false);
       userScriptRef.current = null;
       handleReset(); // Reset model position
-      
+
       // Reset physics bodies to scene objects state
       sceneObjects.forEach(obj => {
         if (physicsBodiesRef.current[obj.id]) {
@@ -501,12 +500,12 @@ export default function Viewport3D() {
           body.position.set(obj.position[0], obj.position[1], obj.position[2]);
           body.velocity.set(0,0,0);
           body.angularVelocity.set(0,0,0);
-          
+
           const euler = new THREE.Euler(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
           const quat = new THREE.Quaternion().setFromEuler(euler);
           body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
         }
-        
+
         if (sceneModelsRef.current[obj.id]) {
           const model = sceneModelsRef.current[obj.id];
           model.position.set(obj.position[0], obj.position[1], obj.position[2]);
@@ -519,7 +518,7 @@ export default function Viewport3D() {
         try {
           // In a production app, use an iframe sandbox or web worker.
           // For this demo IDE, we use new Function with injected scope.
-          
+
           // We inject 'engine' which contains { scene, camera, THREE, CANNON, world, getModel, getSceneObjects, getPhysicsBodies, getDeltaTime }
           const wrappedCode = `
             return function(engine) {
@@ -530,29 +529,26 @@ export default function Viewport3D() {
               const world = engine.world;
               const sceneObjects = engine.getSceneObjects();
               const physicsBodies = engine.getPhysicsBodies();
-              
+
               // Run user code inside this scope
               ${activeCode}
-              
+
               // Call an update function if user defined one
               if (typeof update === 'function') {
                 update(dt, model, THREE, CANNON, world, sceneObjects, physicsBodies);
               }
             }
           `;
-          
           const scriptFunc = new Function(wrappedCode)();
           userScriptRef.current = scriptFunc;
-          setIsPlaying(true);
         } catch (err) {
           console.error('Failed to compile script:', err);
           alert('Erro de compilação no script gerado. Verifique o console.');
+          setIsPlaying(false); // Revert state if error
         }
-      } else {
-        setIsPlaying(true);
       }
     }
-  };
+  }, [isPlaying, activeCode]); // depend on activeCode so it uses the latest code when playing
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -609,8 +605,8 @@ export default function Viewport3D() {
           </div>
         )}
 
-        <button 
-          onClick={togglePlay}
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
           className={`flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg transition shadow-lg border border-slate-700 ${
             isPlaying 
               ? 'bg-red-900/80 text-red-400 hover:bg-red-800' 

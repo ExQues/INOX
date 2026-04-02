@@ -66,6 +66,7 @@ interface Store {
   activeModelUrl: string | null; // URL of the 3D model to preview (deprecated, use sceneObjects)
   sceneObjects: SceneObject[]; // Array of objects in the 3D scene
   activeCode: string | null; // Code currently loaded in the editor
+  isPlaying: boolean; // Global simulation state
   isLoading: boolean;
   error: string | null;
   setUser: (user: Store['user']) => void;
@@ -82,6 +83,7 @@ interface Store {
   removeSceneObject: (id: string) => void;
   clearScene: () => void;
   setActiveCode: (code: string | null) => void;
+  setIsPlaying: (playing: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -96,6 +98,7 @@ export const useStore = create<Store>((set) => ({
   activeModelUrl: null,
   sceneObjects: [],
   activeCode: null,
+  isPlaying: false,
   isLoading: false,
   error: null,
 
@@ -149,6 +152,8 @@ export const useStore = create<Store>((set) => ({
   clearScene: () => set({ sceneObjects: [], activeModelUrl: null }),
 
   setActiveCode: (code) => set({ activeCode: code }),
+
+  setIsPlaying: (isPlaying) => set({ isPlaying }),
 
   setLoading: (isLoading) => set({ isLoading }),
 

@@ -289,3 +289,20 @@ Esse pivot é o passo mais importante do INOX. Ele quebra a barreira do "visual 
 
 ### 3. Análise de Resultados e Próximos Passos
 A plataforma agora fecha o ciclo do AAA: Blockout Visual + Blockout Lógico no navegador -> Sincronização e Compilação Automática (Assets Megascans + Blueprints) na Unreal Engine 5 local. O INOX atua como o Diretor Geral, e o motor gráfico apenas renderiza. A base está 100% pronta. O que vem agora? Melhorias de UX/UI, suporte nativo a controle de versão ou implementação de features de Multiplayer.
+## Iteração 14: Melhorias de UX/UI e Estado Global no Editor
+
+**Objetivo:** Refinar a interface do usuário do Editor, sincronizando o controle da simulação física (Play/Stop) com o header principal da IDE e melhorando a leitura de código e mensagens enviadas pela Inteligência Artificial.
+
+### 1. Implementação
+- **Renderização de Markdown:** Adicionadas as bibliotecas `react-markdown` e `remark-gfm`. As respostas do assistente IA no painel lateral agora renderizam listas, links e, principalmente, **blocos de código** (`<pre><code>`) com formatação correta. Isso resolve o problema de ler grandes objetos JSON ou scripts brutos na UI de chat.
+- **Estilização Customizada:** Escritas regras no `index.css` (`.markdown-body`) para garantir que as listas e tags `<pre>` se adaptem graciosamente ao tema escuro da IDE.
+- **Elevação do Estado da Simulação (`useStore.ts`):** A variável local `isPlaying` do `Viewport3D` foi movida para o Zustand, virando uma variável de estado global. Adicionados os métodos `setIsPlaying`.
+- **Sincronização do Botão Play (`Editor.tsx`):** O botão genérico "Play" verde que ficava estático no topo da tela do editor agora escuta o estado `isPlaying`. Ao clicar nele, ele dispara o Play/Stop de toda a simulação, altera seu ícone para um quadrado (`Stop`) e sua cor para vermelho.
+- **Refatoração do Viewport3D:** O código do Viewport que iniciava a lógica gerada com o `new Function(wrappedCode)()` foi colocado dentro de um `useEffect` reativo a `isPlaying` e `activeCode`. O botão "Play" local da overlay da viewport agora é apenas um espelho do estado global.
+
+### 2. Testes e Validação
+- O ciclo de vida do Play/Stop agora funciona harmoniosamente tanto pelos botões do menu superior quanto pelos overlays flutuantes da Viewport. O fluxo de simulação física (Cannon.js) reage de acordo.
+- O parser Markdown interpreta e quebra os textos das respostas do assistente sem causar estouro de layout no painel (overflow seguro).
+
+### 3. Análise de Resultados e Próximos Passos
+Esta iteração de polimento finaliza o refinamento da "Experiência de IDE", garantindo que a usabilidade seja similar a de ferramentas profissionais como Unity ou o próprio VSCode. A renderização de markdown e botões reativos criam uma percepção de sistema unificado. O próximo passo do loop contínuo pode englobar um sistema de controle de versão dos scripts (commits).
