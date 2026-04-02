@@ -109,6 +109,17 @@ export interface Get3DModelStatusResponse {
   thumbnailUrl?: string;
 }
 
+export interface SaveSceneRequest {
+  projectId: string;
+  sceneObjects: any[];
+  activeCode: string | null;
+}
+
+export interface SaveSceneResponse {
+  success: boolean;
+  project: any;
+  message: string;
+}
 export interface GetProjectAssetsResponse {
   success: boolean;
   assets: Array<{
@@ -293,6 +304,13 @@ export class InoxAiSdk {
   async getProjectAssets(projectId: string): Promise<GetProjectAssetsResponse> {
     return this.request<GetProjectAssetsResponse>(`/api/ai/assets/${projectId}`, {
       method: 'GET',
+    });
+  }
+
+  async saveProjectScene(request: SaveSceneRequest): Promise<SaveSceneResponse> {
+    return this.request<SaveSceneResponse>('/api/ai/save-scene', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   }
 

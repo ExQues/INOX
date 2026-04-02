@@ -11,7 +11,8 @@ import {
   generateUnrealMap,
   generate3DModel,
   get3DModelStatus,
-  getProjectAssets
+  getProjectAssets,
+  saveProjectScene
 } from '../ai/aiController.js';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.post('/modify-code', modifyCode);
 router.post('/chat', chatWithAi);
 router.post('/upload-asset', uploadAiAsset);
 router.get('/assets/:projectId', getProjectAssets);
+router.post('/save-scene', saveProjectScene);
 router.post('/deploy', deployAiGame);
 router.get('/build/:buildId', getAiBuildStatus);
 router.post('/create-from-prompt', createGameFromPrompt);

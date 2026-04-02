@@ -310,6 +310,30 @@ export const generateUnrealMap = async (req: CustomRequest, res: Response) => {
   }
 };
 
+export const saveProjectScene = async (req: CustomRequest, res: Response) => {
+  try {
+    const { projectId, sceneObjects, activeCode } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const updatedProject = await updateProject(projectId, {
+      id: projectId,
+      scene_graph: sceneObjects,
+      code_structure: activeCode
+    });
+
+    res.json({
+      success: true,
+      project: updatedProject,
+      message: 'Scene and logic saved successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const getProjectAssets = async (req: CustomRequest, res: Response) => {
   try {
     const { projectId } = req.params;

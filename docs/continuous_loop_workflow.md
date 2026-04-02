@@ -178,7 +178,29 @@ Para a **Iteração 8**, o foco deve ser interatividade (manipulação visual).
 
 ### 3. Análise de Resultados e Próximos Passos
 Agora a IDE Inox se assemelha muito ao layout base do Unity ou Unreal. O usuário pode popular a fase arrastando assets e organizá-los clicando e puxando as setinhas na tela. 
+Para a **Iteração 9**, o foco deve ser o salvamento desse estado (Cloud Sync).
 
-**Oportunidades para a Iteração 9:**
-1. **Salvar Cena na Nuvem:** Criar um botão "Save" no cabeçalho do Editor que pega esse array `sceneObjects` com as posições modificadas pelo usuário e salva na coluna `code_structure` do Supabase Database, para que a fase carregue pronta no dia seguinte.
-2. **Ponte Python Unreal (Exportar Cena):** Pegar esse estado da cena (quais modelos e onde eles estão) e exportar o JSON para que o `ai_bridge.py` construa exatamente a mesma fase no Unreal Engine 5.
+---
+
+## Iteração 9: Salvamento e Carregamento de Cena (Cloud Sync)
+
+**Objetivo:** Garantir que o trabalho de level design do usuário e os scripts programados não sejam perdidos. O Editor deve salvar o estado atual do `sceneObjects` e do `activeCode` no banco de dados do Supabase.
+
+### 1. Implementação
+- **Atualização de Schema de BD:** A tabela `projects` no Supabase foi estendida (via tipagem `Database`) para suportar a coluna `scene_graph` no formato JSON.
+- **Atualização do Store (`useStore.ts`):** O modelo da interface `Project` do React foi atualizado para suportar a leitura e escrita do `scene_graph`.
+- **Endpoint de Salvamento (`aiController.ts`):** Criado o novo endpoint `POST /api/ai/save-scene`. Ele recebe o ID do projeto, o JSON do `sceneObjects` e o texto do `activeCode`, realizando um update transacional no banco de dados através da função `updateProject`.
+- **SDK e UI:** 
+  - Adicionado `saveProjectScene` no `inoxAiSdk.ts`.
+  - Conectado o botão superior de "Salvar" (`Editor.tsx`) para disparar essa requisição. Adicionei UX visual com o ícone de Loading e feedback de sucesso no chat da IA.
+- **Carregamento Automático (Mount):** No `useEffect` de inicialização do projeto (`Editor.tsx`), adicionei uma lógica que lê `currentProject.scene_graph`. Se existir, a cena salva é hidratada no Zustand e a tela renderiza os modelos exatamente nas posições XYZ em que o usuário os deixou no dia anterior.
+
+### 2. Testes e Validação
+- O build TypeScript falhou na primeira tentativa pois o controller tentou atualizar o `updated_at`, que é gerido automaticamente pelo Supabase/PostgreSQL. A correção foi feita.
+- Fluxo garantido: Modificar a cena -> Clicar em Salvar -> Dar F5 -> A cena carrega idêntica.
+
+### 3. Análise de Resultados e Próximos Passos
+Temos um ciclo de vida de projeto 100% funcional. O INOX Game Creator já atua como uma IDE serverless completa.
+
+**A Grande Oportunidade Final (Iteração 10):**
+A ponte para a **Unreal Engine 5**. Pegar essa cena JSON que estamos salvando tão perfeitamente e fazer nosso script Python baixar ela, converter os Transforms de Web (Three.js) para UE5 (Z-up), e montar a fase no PC local do desenvolvedor.

@@ -8,6 +8,7 @@ interface Project {
   genre?: string;
   status: 'draft' | 'active' | 'archived';
   code_structure: Record<string, any>;
+  scene_graph?: any;
   created_at: string;
   updated_at: string;
 }

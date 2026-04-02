@@ -28,6 +28,7 @@ export default function Editor() {
   const [chatMessage, setChatMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [projectAssets, setProjectAssets] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
@@ -41,7 +42,28 @@ export default function Editor() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load project assets
+  // Handle Save Scene
+  const handleSaveScene = async () => {
+    if (!currentProject?.id) return;
+    
+    setIsSaving(true);
+    try {
+      const response = await aiSdk.saveProjectScene({
+        projectId: currentProject.id,
+        sceneObjects: useStore.getState().sceneObjects,
+        activeCode: useStore.getState().activeCode
+      });
+      
+      if (response.success) {
+        setMessages(prev => [...prev, { role: 'assistant', content: "✅ Cena e lógica salvas na nuvem com sucesso! O projeto foi sincronizado." }]);
+      }
+    } catch (error) {
+      console.error('Failed to save scene:', error);
+      alert('Erro ao salvar cena na nuvem.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const loadAssets = async () => {
     if (currentProject?.id) {
       try {
@@ -56,7 +78,18 @@ export default function Editor() {
   };
 
   useEffect(() => {
-    loadAssets();
+    if (currentProject) {
+      loadAssets();
+      
+      // Load saved scene graph and code if they exist
+      if (currentProject.scene_graph && Array.isArray(currentProject.scene_graph)) {
+        useStore.setState({ sceneObjects: currentProject.scene_graph });
+      }
+      
+      if (currentProject.code_structure && typeof currentProject.code_structure === 'string') {
+        setActiveCode(currentProject.code_structure);
+      }
+    }
   }, [currentProject?.id]);
 
   // Handle Chat Submission
@@ -177,8 +210,12 @@ export default function Editor() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 rounded-md transition text-sm font-medium">
-            <Save className="w-4 h-4" />
+          <button 
+            onClick={handleSaveScene}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-700 disabled:opacity-50 rounded-md transition text-sm font-medium"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Salvar
           </button>
           <button className="flex items-center gap-2 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-md transition text-sm font-medium shadow-lg shadow-green-900/20">
