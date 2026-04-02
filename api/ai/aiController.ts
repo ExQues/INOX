@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { generateGameCode } from '../services/aiService';
+import { generateGameCode, request3DModelGeneration, check3DModelStatus } from '../services/aiService';
 import { createProject, getProject, updateProject, createAiConversation, updateAiConversation, getAiConversation } from '../services/supabaseService';
 import { uploadAsset } from '../services/assetService';
 import { deployGame, getBuildStatus } from '../services/deployService';
@@ -297,5 +297,48 @@ export const generateUnrealMap = async (req: CustomRequest, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: (error as Error).message });
+  }
+};
+
+export const generate3DModel = async (req: CustomRequest, res: Response) => {
+  try {
+    const { prompt, style } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    const task = await request3DModelGeneration({ prompt, style });
+    
+    res.json({
+      success: true,
+      taskId: task.taskId,
+      status: task.status,
+      message: '3D model generation started'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const get3DModelStatus = async (req: CustomRequest, res: Response) => {
+  try {
+    const { taskId } = req.params;
+
+    if (!taskId) {
+      return res.status(400).json({ error: 'Task ID is required' });
+    }
+
+    const status = await check3DModelStatus(taskId);
+
+    res.json({
+      success: true,
+      taskId: status.taskId,
+      status: status.status,
+      modelUrl: status.modelUrl,
+      thumbnailUrl: status.thumbnailUrl
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 };

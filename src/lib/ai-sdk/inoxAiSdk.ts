@@ -87,6 +87,26 @@ export interface AssetUploadResponse {
   size: number;
 }
 
+export interface Generate3DModelRequest {
+  prompt: string;
+  style?: 'realistic' | 'stylized' | 'low-poly';
+}
+
+export interface Generate3DModelResponse {
+  success: boolean;
+  taskId: string;
+  status: 'processing' | 'completed' | 'failed';
+  message: string;
+}
+
+export interface Get3DModelStatusResponse {
+  success: boolean;
+  taskId: string;
+  status: 'processing' | 'completed' | 'failed';
+  modelUrl?: string;
+  thumbnailUrl?: string;
+}
+
 export interface DeployRequest {
   projectId: string;
   platform: 'web' | 'desktop' | 'mobile';
@@ -252,25 +272,45 @@ export class InoxAiSdk {
     throw new Error('Build timeout');
   }
 
-  async createGameFromDescription(
-    description: string,
-    options: Partial<GameConfig> = {}
-  ): Promise<{ project: ProjectResponse; code: CodeGenerationResponse }> {
-    const project = await this.createProject({
-      name: options.name || 'AI Generated Game',
-      description: description,
-      platform: options.platform || 'web',
-      aiPrompt: description,
-      ...options,
+  async generateUnrealMap(prompt: string, density: string = 'high', timeOfDay: string = 'day'): Promise<any> {
+    return this.request<any>('/api/ai/generate-unreal-map', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, density, time_of_day: timeOfDay }),
     });
+  }
 
-    const code = await this.generateCode({
-      projectId: project.projectId,
-      prompt: description,
-      model: options.model,
+  async generate3DModel(request: Generate3DModelRequest): Promise<Generate3DModelResponse> {
+    return this.request<Generate3DModelResponse>('/api/ai/generate-3d', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
+  }
 
-    return { project, code };
+  async get3DModelStatus(taskId: string): Promise<Get3DModelStatusResponse> {
+    return this.request<Get3DModelStatusResponse>(`/api/ai/generate-3d/${taskId}`, {
+      method: 'GET',
+    });
+  }
+
+  async waitFor3DModel(
+    taskId: string,
+    pollInterval: number = 2000,
+    maxAttempts: number = 30
+  ): Promise<Get3DModelStatusResponse> {
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const status = await this.get3DModelStatus(taskId);
+
+      if (status.status === 'completed' || status.status === 'failed') {
+        return status;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      attempts++;
+    }
+
+    throw new Error('3D generation timeout');
   }
 }
 

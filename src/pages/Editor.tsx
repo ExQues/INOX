@@ -8,6 +8,14 @@ import {
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 
+import { createInoxAiSdk } from '../lib/ai-sdk/inoxAiSdk';
+
+// Inicializar SDK
+const aiSdk = createInoxAiSdk({
+  apiKey: import.meta.env.VITE_AI_API_KEY || 'mock-key',
+  baseUrl: 'http://localhost:3001'
+});
+
 export default function Editor() {
   const navigate = useNavigate();
   const { currentProject, user, setActiveModelUrl } = useStore();
@@ -38,27 +46,44 @@ export default function Editor() {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsGenerating(true);
 
-    // Mock AI Response generation (To be connected to backend)
-    setTimeout(() => {
+    // Simulate AI Response generation
+    try {
       let aiResponse = "Entendi! Vou começar a trabalhar nisso para o seu projeto.";
       
-      // Simple keyword detection for demo
+      // Keyword detection for demo
       if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem')) {
-        aiResponse = "Iniciando o pipeline de geração 3D ultra-realista... 🚀\n\nEstou conectando à engine de geração para esculpir o modelo e gerar as texturas PBR. Assim que o arquivo .glb estiver pronto, ele será importado automaticamente para sua cena e para os assets da Unreal Engine.";
-        
-        // Simular o tempo de geração de um modelo da Meshy ou Tripo e carregar no Viewport
-        setTimeout(() => {
-          // Usando um modelo GLB público de exemplo para demonstração
-          setActiveModelUrl('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf');
-          setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
-        }, 3000);
+        aiResponse = "Iniciando o pipeline de geração 3D ultra-realista via API... 🚀\n\nEstou conectando à engine de geração para esculpir o modelo e gerar as texturas PBR.";
+        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+
+        // 1. Inicia a requisição de geração
+        const generationRequest = await aiSdk.generate3DModel({
+          prompt: userMessage,
+          style: 'realistic'
+        });
+
+        if (generationRequest.success && generationRequest.taskId) {
+          // 2. Aguarda a conclusão (Polling via SDK)
+          const result = await aiSdk.waitFor3DModel(generationRequest.taskId);
+          
+          if (result.status === 'completed' && result.modelUrl) {
+            setActiveModelUrl(result.modelUrl);
+            setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
+          } else {
+            setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao gerar o modelo 3D." }]);
+          }
+        }
       } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código')) {
         aiResponse = "Gerando o script de comportamento... \n\nVou adicionar a lógica no seu painel de código para que possamos testar no Viewport.";
+        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
       }
-
-      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+    } catch (error) {
+      console.error('Erro na IA:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro de conexão com o servidor de IA." }]);
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
