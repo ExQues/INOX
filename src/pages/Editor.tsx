@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   ArrowLeft, Play, Square, Save, Settings, Layers,
   Code, Box, Image as ImageIcon, FileText,
-  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor
+  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 import EditorCode from 'react-simple-code-editor';
@@ -23,8 +23,10 @@ const aiSdk = createInoxAiSdk({
 
 export default function Editor() {
   const navigate = useNavigate();
-  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject, isPlaying, setIsPlaying } = useStore();
+  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject, isPlaying, setIsPlaying, consoleLogs, clearLogs } = useStore();
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
+  const [isConsoleOpen, setIsConsoleOpen] = useState(true);
+  const consoleEndRef = useRef<HTMLDivElement>(null);
   
   // AI Assistant State
   const [chatMessage, setChatMessage] = useState('');
@@ -44,6 +46,13 @@ export default function Editor() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-scroll console
+  useEffect(() => {
+    if (isConsoleOpen) {
+      consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [consoleLogs, isConsoleOpen]);
 
   // Handle Save Scene
   const handleSaveScene = async () => {
@@ -366,9 +375,9 @@ export default function Editor() {
                     <span className="text-[10px] text-green-400 font-mono">Sincronizado</span>
                   </div>
                 </div>
-                <div className="flex-1 overflow-auto custom-scrollbar relative">
+                <div className="flex-1 overflow-auto custom-scrollbar relative pb-[200px]">
                   <EditorCode
-                    value={activeCode || `// Escreva ou peça para IA gerar um script\n// Exemplo de rotação:\nfunction update(dt, model) {\n  model.rotation.y += 1 * dt;\n}`}
+                    value={activeCode || `// Escreva ou peça para IA gerar um script\n// Exemplo de rotação:\nfunction update(dt, model, THREE, CANNON, world, sceneObjects) {\n  if (model) {\n    model.rotation.y += 1 * dt;\n    console.log("Rotacionando o modelo:", model.rotation.y);\n  }\n}`}
                     onValueChange={code => setActiveCode(code)}
                     highlight={code => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
                     padding={20}
@@ -381,6 +390,69 @@ export default function Editor() {
                       minHeight: '100%'
                     }}
                   />
+                </div>
+
+                {/* Console Panel */}
+                <div 
+                  className={`absolute bottom-0 left-0 right-0 bg-[#1e1e1e] border-t border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${
+                    isConsoleOpen ? 'h-48' : 'h-10'
+                  }`}
+                >
+                  <div 
+                    className="h-10 px-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/50 transition-colors"
+                    onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-300">Console</span>
+                      {consoleLogs.length > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-slate-800 text-[10px] text-slate-400 border border-slate-700">
+                          {consoleLogs.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); clearLogs(); }}
+                        className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition"
+                        title="Limpar Console"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {isConsoleOpen && (
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-2 font-mono text-[13px]">
+                      {consoleLogs.length === 0 ? (
+                        <div className="text-slate-500 italic px-2 py-1">Nenhum log gerado.</div>
+                      ) : (
+                        <div className="space-y-1">
+                          {consoleLogs.map((log) => (
+                            <div 
+                              key={log.id} 
+                              className={`px-2 py-1 rounded flex items-start gap-2 border-l-2 ${
+                                log.type === 'error' ? 'bg-red-900/10 text-red-400 border-red-500' :
+                                log.type === 'warn' ? 'bg-yellow-900/10 text-yellow-400 border-yellow-500' :
+                                'text-slate-300 border-blue-500/50 hover:bg-slate-800/50'
+                              }`}
+                            >
+                              <span className="text-slate-500 shrink-0 select-none">
+                                {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </span>
+                              <span className="shrink-0 mt-0.5">
+                                {log.type === 'error' ? <AlertCircle className="w-3.5 h-3.5" /> : 
+                                 log.type === 'warn' ? <AlertCircle className="w-3.5 h-3.5" /> : 
+                                 <Info className="w-3.5 h-3.5 text-blue-400" />}
+                              </span>
+                              <span className="break-all whitespace-pre-wrap">{log.message}</span>
+                            </div>
+                          ))}
+                          <div ref={consoleEndRef} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

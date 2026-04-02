@@ -306,3 +306,29 @@ A plataforma agora fecha o ciclo do AAA: Blockout Visual + Blockout Lógico no n
 
 ### 3. Análise de Resultados e Próximos Passos
 Esta iteração de polimento finaliza o refinamento da "Experiência de IDE", garantindo que a usabilidade seja similar a de ferramentas profissionais como Unity ou o próprio VSCode. A renderização de markdown e botões reativos criam uma percepção de sistema unificado. O próximo passo do loop contínuo pode englobar um sistema de controle de versão dos scripts (commits).
+
+## Iteração 15: Console Integrado de Debugging (In-Game Console)
+
+**Objetivo:** Permitir que o desenvolvedor visualize os logs, avisos e erros dos scripts que ele (ou a IA) escreveu, diretamente na UI do Editor, sem precisar abrir o DevTools do navegador. Isso melhora drasticamente a experiência de Debugging no Sandbox web.
+
+### 1. Implementação
+- **Estado Global (`useStore.ts`):** Criada a interface `LogMessage` e adicionados `consoleLogs`, `addLog` e `clearLogs` no Zustand. O array armazena o tipo de log (log, warn, error), a mensagem e o timestamp.
+- **Injeção de Contexto (`Viewport3D.tsx`):**
+  - O `engineContextRef` passou a expor um método interno `log()` que chama o `addLog` do store.
+  - A string do `wrappedCode` (que cria a nova `Function` do script) foi atualizada para declarar um objeto `console` local. Esse objeto intercepta chamadas `console.log`, `console.warn` e `console.error` escritas pelo usuário/IA e repassa para o `engine.log`.
+  - Adicionado `clearLogs()` automático sempre que o botão de "Play" é pressionado.
+  - Erros de compilação (Syntax Errors) que ocorrem ao iniciar o Play agora são capturados pelo `catch` e injetados no console do Editor como tipo `error`.
+- **UI do Console (`Editor.tsx`):**
+  - Na aba de Código (`activeTab === 'code'`), foi implementado um painel expansível e retrátil na parte inferior.
+  - O painel possui um cabeçalho com o ícone de Terminal e um contador dinâmico de mensagens.
+  - Uma área de rolagem renderiza as mensagens de log com cores dinâmicas (vermelho para erros, amarelo para avisos, azul/branco para logs padrão) e ícones correspondentes do `lucide-react`.
+  - Adicionado um hook `useEffect` (`consoleEndRef`) para fazer o scroll automático para baixo sempre que um novo log chega.
+  - O exemplo de código padrão do Editor agora já vem com um `console.log` demonstrativo dentro do loop de rotação.
+
+### 2. Testes e Validação
+- O fluxo testado: Apertar "Play" com o código padrão. Clicar na aba "Código". O console inferior se enche de timestamps mostrando o ângulo de rotação em tempo real. Apertar "Stop" e "Play" novamente limpa o console antigo e reinicia o loop perfeitamente.
+- Código propositalmente escrito com erros de sintaxe (ex: faltar uma chave) foi devidamente pego no `catch` e exibido no painel inferior como alerta em vermelho, não quebrando a UI geral.
+
+### 3. Análise de Resultados e Próximos Passos
+O "In-Game Console" é a marca registrada de engines profissionais. A funcionalidade reduz a fricção de desenvolvimento e permite que a própria IA corrija erros com base no output visual futuro.
+O ciclo de iteração contínua solidificou mais uma pilar da arquitetura web.

@@ -41,6 +41,13 @@ interface Template {
   created_at: string;
 }
 
+export interface LogMessage {
+  id: string;
+  type: 'log' | 'warn' | 'error';
+  message: string;
+  timestamp: number;
+}
+
 export interface SceneObject {
   id: string;
   assetId: string;
@@ -66,6 +73,7 @@ interface Store {
   activeModelUrl: string | null; // URL of the 3D model to preview (deprecated, use sceneObjects)
   sceneObjects: SceneObject[]; // Array of objects in the 3D scene
   activeCode: string | null; // Code currently loaded in the editor
+  consoleLogs: LogMessage[]; // Console logs from the editor sandbox
   isPlaying: boolean; // Global simulation state
   isLoading: boolean;
   error: string | null;
@@ -83,6 +91,8 @@ interface Store {
   removeSceneObject: (id: string) => void;
   clearScene: () => void;
   setActiveCode: (code: string | null) => void;
+  addLog: (log: Omit<LogMessage, 'id' | 'timestamp'>) => void;
+  clearLogs: () => void;
   setIsPlaying: (playing: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -98,6 +108,7 @@ export const useStore = create<Store>((set) => ({
   activeModelUrl: null,
   sceneObjects: [],
   activeCode: null,
+  consoleLogs: [],
   isPlaying: false,
   isLoading: false,
   error: null,
@@ -152,6 +163,12 @@ export const useStore = create<Store>((set) => ({
   clearScene: () => set({ sceneObjects: [], activeModelUrl: null }),
 
   setActiveCode: (code) => set({ activeCode: code }),
+
+  addLog: (log) => set((state) => ({ 
+    consoleLogs: [...state.consoleLogs, { ...log, id: Math.random().toString(36).substr(2, 9), timestamp: Date.now() }] 
+  })),
+
+  clearLogs: () => set({ consoleLogs: [] }),
 
   setIsPlaying: (isPlaying) => set({ isPlaying }),
 

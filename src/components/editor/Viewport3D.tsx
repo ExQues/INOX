@@ -28,7 +28,7 @@ export default function Viewport3D() {
   const userScriptRef = useRef<Function | null>(null);
   const engineContextRef = useRef<any>(null);
 
-  const { activeModelUrl, sceneObjects, activeCode, updateSceneObject, isPlaying, setIsPlaying } = useStore();
+  const { activeModelUrl, sceneObjects, activeCode, updateSceneObject, isPlaying, setIsPlaying, addLog, clearLogs } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
@@ -198,7 +198,11 @@ export default function Viewport3D() {
       getModel: () => modelRef.current,
       getSceneObjects: () => sceneModelsRef.current,
       getPhysicsBodies: () => physicsBodiesRef.current,
-      getDeltaTime: () => 0.016, // Simplified for demo
+      getDeltaTime: () => 1 / 60, // Fixed timestep for now
+      log: (type: 'log' | 'warn' | 'error', message: string) => {
+        addLog({ type, message });
+        console[type]('[Engine]', message);
+      }
     };
 
     // Render Loop
@@ -514,6 +518,7 @@ export default function Viewport3D() {
       });
     } else {
       // Play
+      clearLogs();
       if (activeCode) {
         try {
           // In a production app, use an iframe sandbox or web worker.
@@ -529,6 +534,13 @@ export default function Viewport3D() {
               const world = engine.world;
               const sceneObjects = engine.getSceneObjects();
               const physicsBodies = engine.getPhysicsBodies();
+              
+              // Custom Console
+              const console = {
+                log: (...args) => engine.log('log', args.join(' ')),
+                warn: (...args) => engine.log('warn', args.join(' ')),
+                error: (...args) => engine.log('error', args.join(' ')),
+              };
 
               // Run user code inside this scope
               ${activeCode}
@@ -541,9 +553,9 @@ export default function Viewport3D() {
           `;
           const scriptFunc = new Function(wrappedCode)();
           userScriptRef.current = scriptFunc;
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to compile script:', err);
-          alert('Erro de compilação no script gerado. Verifique o console.');
+          addLog({ type: 'error', message: `Erro de compilação: ${err.message}` });
           setIsPlaying(false); // Revert state if error
         }
       }
