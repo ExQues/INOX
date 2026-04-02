@@ -107,6 +107,32 @@ Para a **Iteração 5**, o foco deve ser o gerador de lógica de scripts.
 
 ### 3. Análise de Resultados e Próximos Passos
 Esta iteração consolida o INOX Game Creator como uma IDE completa. O chat agora atua nos dois pilares de um jogo: **Assets (3D)** e **Lógica (Scripts)**.
-Para a **Iteração 6**, o próximo desafio lógico é:
-1. **Execução de Código Seguro:** Como fazer o Viewport3D (Three.js) "ler" esse código JavaScript que a IA acabou de gerar na aba de código e executar ele no modelo 3D atual, sem quebrar a aplicação React (usando `eval` de forma segura ou um iframe).
-2. **Integração Unreal Engine:** Fazer o "Push to Unreal". Botão que pega o modelo 3D atual + o script ativo e manda pro script Python gerar os arquivos nativos na UE5.
+Para a **Iteração 6**, o próximo desafio lógico é a execução.
+
+---
+
+## Iteração 6: Execução em Tempo Real (O Botão Play)
+
+**Objetivo:** Permitir que o código JavaScript gerado pela IA ou digitado pelo usuário na aba "Código" seja executado com segurança no Viewport3D, afetando o modelo 3D atual.
+
+### 1. Implementação
+- **Botão Play/Stop:** Adicionado um botão de "Play" dinâmico na overlay do `Viewport3D.tsx`. Ele alterna entre verde (Play) e vermelho (Stop).
+- **Engine Context (Sandbox Local):** Criei uma abstração de API da engine dentro do componente. Foi instanciado um objeto `engineContextRef` contendo a `scene`, a `camera`, a instância do `THREE`, o método `getModel()` e o `getDeltaTime()`.
+- **Injeção de Script Dinâmico:** Quando o usuário clica em "Play", o aplicativo pega a string salva em `activeCode` (que pode ter sido gerada pelo Assistente IA), encapsula ela em uma string de função usando `new Function(wrappedCode)()` e injeta o `engineContext`.
+- **Game Loop:** Dentro da função `animate` (o loop de renderização a 60fps do Three.js), eu adicionei uma chamada para `userScriptRef.current(engineContextRef.current)`. Isso faz com que a função `update(dt, model)` escrita no painel de código rode a cada frame.
+- **Tratamento de Erros:** O bloco de execução está envolto em um `try/catch`. Se o usuário/IA escrever um código com erro de sintaxe, o motor pausa a execução imediatamente (`userScriptRef.current = null`) e emite um console.error, evitando que o React quebre ("White Screen of Death").
+
+### 2. Testes e Validação
+- O fluxo de estado funciona perfeitamente: 
+  1. Digitar um código de rotação: `function update(dt, model) { model.rotation.y += 1 * dt; }`
+  2. Ir para a aba Preview.
+  3. Clicar em Play -> O modelo começa a girar.
+  4. Clicar em Stop -> O modelo para e reseta a posição inicial.
+- Compilação (`tsc --noEmit`) 100% livre de erros.
+
+### 3. Análise de Resultados e Próximos Passos
+Temos um motor completo rodando no navegador! A IA gera o modelo 3D, a IA gera o script, e a nossa engine junta os dois em tempo de execução usando o botão Play. Isso cumpre perfeitamente a visão do projeto INOX.
+
+**Próximos passos possíveis para a Iteração 7:**
+1. **Ponte com a Unreal Engine (Push to AAA):** Pegar esse mesmo pacote (Modelo 3D + Script JS convertido para Blueprint/C++) e enviar para o nosso script Python conectar na Unreal Engine 5.
+2. **Integração de Controles de Teclado/Mouse:** Adicionar listeners no contexto da Engine para que o usuário possa escrever scripts que reajam às setas do teclado (ex: WASD para mover o personagem gerado pela IA).

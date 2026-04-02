@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useStore } from '../../store/useStore';
-import { RefreshCw, Maximize2, Loader2 } from 'lucide-react';
+import { RefreshCw, Maximize2, Loader2, Play, Square } from 'lucide-react';
 
 export default function Viewport3D() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -13,10 +13,15 @@ export default function Viewport3D() {
   const controlsRef = useRef<OrbitControls | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
+  
+  // Execution Context Refs
+  const userScriptRef = useRef<Function | null>(null);
+  const engineContextRef = useRef<any>(null);
 
-  const { activeModelUrl } = useStore();
+  const { activeModelUrl, activeCode } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Initialize Engine
   useEffect(() => {
@@ -88,16 +93,35 @@ export default function Viewport3D() {
     controls.dampingFactor = 0.05;
     controlsRef.current = controls;
 
+    // Create Engine Context for user scripts
+    engineContextRef.current = {
+      scene,
+      camera,
+      THREE,
+      getModel: () => modelRef.current,
+      getDeltaTime: () => 0.016, // Simplified for demo
+    };
+
     // Render Loop
     const animate = () => {
       animationFrameId.current = requestAnimationFrame(animate);
 
       controls.update();
 
-      // Rotate model slightly if it's the default cube, else let user control
-      if (modelRef.current && !activeModelUrl) {
-        modelRef.current.rotation.x += 0.01;
-        modelRef.current.rotation.y += 0.01;
+      // Execute user script if playing
+      if (userScriptRef.current) {
+        try {
+          userScriptRef.current(engineContextRef.current);
+        } catch (e) {
+          console.error('Error executing user script:', e);
+          userScriptRef.current = null; // Stop execution on error
+        }
+      } else {
+        // Rotate model slightly if it's the default cube and not playing
+        if (modelRef.current && !activeModelUrl) {
+          modelRef.current.rotation.x += 0.01;
+          modelRef.current.rotation.y += 0.01;
+        }
       }
 
       renderer.render(scene, camera);
@@ -224,6 +248,51 @@ export default function Viewport3D() {
     }
   };
 
+  const togglePlay = () => {
+    if (isPlaying) {
+      // Stop
+      setIsPlaying(false);
+      userScriptRef.current = null;
+      handleReset(); // Reset model position
+    } else {
+      // Play
+      if (activeCode) {
+        try {
+          // In a production app, use an iframe sandbox or web worker.
+          // For this demo IDE, we use new Function with injected scope.
+          
+          // We inject 'engine' which contains { scene, camera, THREE, getModel, getDeltaTime }
+          const wrappedCode = `
+            return function(engine) {
+              const model = engine.getModel();
+              if (!model) return;
+              
+              const THREE = engine.THREE;
+              const dt = engine.getDeltaTime();
+              
+              // Run user code inside this scope
+              ${activeCode}
+              
+              // Call an update function if user defined one
+              if (typeof update === 'function') {
+                update(dt, model, THREE);
+              }
+            }
+          `;
+          
+          const scriptFunc = new Function(wrappedCode)();
+          userScriptRef.current = scriptFunc;
+          setIsPlaying(true);
+        } catch (err) {
+          console.error('Failed to compile script:', err);
+          alert('Erro de compilação no script gerado. Verifique o console.');
+        }
+      } else {
+        setIsPlaying(true);
+      }
+    }
+  };
+
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     
@@ -253,6 +322,19 @@ export default function Viewport3D() {
 
       {/* Engine Overlay UI */}
       <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={togglePlay}
+          className={`flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg transition shadow-lg border border-slate-700 ${
+            isPlaying 
+              ? 'bg-red-900/80 text-red-400 hover:bg-red-800' 
+              : 'bg-green-900/80 text-green-400 hover:bg-green-800'
+          }`}
+          title={isPlaying ? "Parar Simulação" : "Executar Script"}
+        >
+          {isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+          <span className="text-sm font-bold">{isPlaying ? 'Stop' : 'Play'}</span>
+        </button>
+
         <button 
           onClick={handleReset}
           className="p-2 bg-slate-800/80 hover:bg-slate-700 backdrop-blur-sm rounded-lg text-slate-300 hover:text-white transition shadow-lg border border-slate-700"

@@ -282,7 +282,7 @@ export default function Editor() {
                 </div>
                 <div className="flex-1 overflow-auto custom-scrollbar relative">
                   <EditorCode
-                    value={activeCode || `import { Engine } from '@inox/core';\n\nconst game = new Engine({\n  canvas: document.getElementById('game-canvas'),\n  physics: true\n});\n\ngame.start();`}
+                    value={activeCode || `// Escreva ou peça para IA gerar um script\n// Exemplo de rotação:\nfunction update(dt, model) {\n  model.rotation.y += 1 * dt;\n}`}
                     onValueChange={code => setActiveCode(code)}
                     highlight={code => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
                     padding={20}
