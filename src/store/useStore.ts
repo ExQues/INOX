@@ -73,6 +73,7 @@ interface Store {
   activeModelUrl: string | null; // URL of the 3D model to preview (deprecated, use sceneObjects)
   sceneObjects: SceneObject[]; // Array of objects in the 3D scene
   activeCode: string | null; // Code currently loaded in the editor
+  activeBlueprint: any | null; // JSON schema of the generated Blueprint
   consoleLogs: LogMessage[]; // Console logs from the editor sandbox
   isPlaying: boolean; // Global simulation state
   isLoading: boolean;
@@ -91,6 +92,7 @@ interface Store {
   removeSceneObject: (id: string) => void;
   clearScene: () => void;
   setActiveCode: (code: string | null) => void;
+  setActiveBlueprint: (blueprint: any | null) => void;
   addLog: (log: Omit<LogMessage, 'id' | 'timestamp'>) => void;
   clearLogs: () => void;
   setIsPlaying: (playing: boolean) => void;
@@ -108,6 +110,7 @@ export const useStore = create<Store>((set) => ({
   activeModelUrl: null,
   sceneObjects: [],
   activeCode: null,
+  activeBlueprint: null,
   consoleLogs: [],
   isPlaying: false,
   isLoading: false,
@@ -163,6 +166,8 @@ export const useStore = create<Store>((set) => ({
   clearScene: () => set({ sceneObjects: [], activeModelUrl: null }),
 
   setActiveCode: (code) => set({ activeCode: code }),
+
+  setActiveBlueprint: (blueprint) => set({ activeBlueprint: blueprint }),
 
   addLog: (log) => set((state) => ({ 
     consoleLogs: [...state.consoleLogs, { ...log, id: Math.random().toString(36).substr(2, 9), timestamp: Date.now() }] 

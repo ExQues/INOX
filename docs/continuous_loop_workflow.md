@@ -332,3 +332,29 @@ Esta iteração de polimento finaliza o refinamento da "Experiência de IDE", ga
 ### 3. Análise de Resultados e Próximos Passos
 O "In-Game Console" é a marca registrada de engines profissionais. A funcionalidade reduz a fricção de desenvolvimento e permite que a própria IA corrija erros com base no output visual futuro.
 O ciclo de iteração contínua solidificou mais uma pilar da arquitetura web.
+
+## Iteração 16: Visualizador de Blueprint (Node Graph)
+
+**Objetivo:** Fornecer uma interface visual para que o usuário possa ver a "Lógica AAA" (Unreal Blueprint) gerada pela Inteligência Artificial. Em vez de obrigar o desenvolvedor a ler um JSON puro e cru de uma Blueprint na aba de Código, o Editor agora possui uma aba dedicada que renderiza esse JSON em um formato visual inspirado em nós (Node Graph) da Unreal Engine.
+
+### 1. Implementação
+- **Estado Global (`useStore.ts`):** 
+  - Adicionado o estado `activeBlueprint` (tipo `any | null`) para armazenar o JSON parseado da Blueprint gerada pela IA.
+  - Criado o setter `setActiveBlueprint`.
+- **Evolução do Parser do Chat (`Editor.tsx`):**
+  - O manipulador de respostas da IA foi atualizado. Se a IA gerar um script que contenha as chaves `"nodes":` ou `"blueprint_name":` (indicando que é um JSON de Blueprint para a Unreal), o Frontend agora tenta fazer o `JSON.parse()`.
+  - Se for bem-sucedido, o estado é atualizado para a aba "blueprint" (`setActiveTab('blueprint')`) em vez da aba "code".
+- **Componente Node Graph Visual:**
+  - Adicionada uma nova aba "Blueprint" na barra superior central da interface (ao lado de Preview e Código).
+  - Quando ativa, ela renderiza uma UI customizada que simula a interface do "Event Graph" da Unreal Engine.
+  - O JSON é mapeado (`activeBlueprint.nodes.map()`). Cada nó é renderizado como um bloco escuro com bordas e cabeçalhos coloridos (gradient azul/roxo).
+  - As propriedades de cada nó (`node.properties`) são exibidas como listas do tipo chave-valor com formatação `monospace`.
+  - Conectores visuais (bolinhas cinzas na lateral esquerda e direita dos nós) foram adicionados com CSS absoluto para aumentar a fidelidade estética à Unreal Engine.
+
+### 2. Testes e Validação
+- Se o usuário pedir "Crie um script JavaScript", o sistema continua abrindo a aba "Código" com syntax highlight.
+- Se o usuário pedir "Crie uma lógica Blueprint AAA para Unreal", o parser lê o JSON da IA, injeta no estado e abre a aba "Blueprint" renderizando os nós visuais (ex: EventBeginPlay, SpawnActor).
+- Tratamento de erro (Try/Catch) adicionado: Se o JSON da IA vier malformado, o sistema dá fallback automático e joga o JSON quebrado na aba de "Código" normal para o usuário arrumar manualmente.
+
+### 3. Análise de Resultados e Próximos Passos
+O Visualizador de Blueprint reduz o atrito psicológico entre o Sandbox Web (JavaScript) e o Produto Final (Unreal Engine 5). O desenvolvedor consegue ter a percepção imediata do que a IA construiu sem precisar dar o F5 na Engine local. O próximo passo do ciclo contínuo pode englobar um sistema de login ou versionamento das blueprints salvas.
