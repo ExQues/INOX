@@ -53,6 +53,7 @@ interface Store {
   assets: Asset[];
   currentTemplate: Template | null;
   activeModelUrl: string | null; // URL of the 3D model to preview
+  activeCode: string | null; // Code currently loaded in the editor
   isLoading: boolean;
   error: string | null;
   setUser: (user: Store['user']) => void;
@@ -64,6 +65,7 @@ interface Store {
   setAssets: (assets: Asset[]) => void;
   setCurrentTemplate: (template: Template | null) => void;
   setActiveModelUrl: (url: string | null) => void;
+  setActiveCode: (code: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -76,6 +78,7 @@ export const useStore = create<Store>((set) => ({
   assets: [],
   currentTemplate: null,
   activeModelUrl: null,
+  activeCode: null,
   isLoading: false,
   error: null,
 
@@ -110,6 +113,8 @@ export const useStore = create<Store>((set) => ({
   setCurrentTemplate: (template) => set({ currentTemplate: template }),
 
   setActiveModelUrl: (url) => set({ activeModelUrl: url }),
+
+  setActiveCode: (code) => set({ activeCode: code }),
 
   setLoading: (isLoading) => set({ isLoading }),
 

@@ -71,6 +71,7 @@ export interface ChatResponse {
     description: string;
   }>;
   suggestedActions?: string[];
+  activeCode?: string;
 }
 
 export interface AssetUploadRequest {

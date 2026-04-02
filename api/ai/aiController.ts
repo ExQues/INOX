@@ -147,10 +147,19 @@ export const chatWithAi = async (req: CustomRequest, res: Response) => {
       operation: 'chat',
     });
 
+    // Extract the main file content if it exists to be injected directly
+    let activeCode = '';
+    if (response.code && Object.keys(response.code).length > 0) {
+      // Prioritize main.js or index.js, otherwise take the first file
+      const mainFile = Object.keys(response.code).find(f => f.includes('main') || f.includes('index'));
+      activeCode = mainFile ? response.code[mainFile] : response.code[Object.keys(response.code)[0]];
+    }
+
     res.json({
       response: response.explanation,
       codeSnippets: response.codeSnippets || [],
       suggestedActions: response.suggestedActions || [],
+      activeCode: activeCode || undefined
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

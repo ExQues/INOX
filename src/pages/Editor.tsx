@@ -4,10 +4,13 @@ import { useStore } from '../store/useStore';
 import { 
   ArrowLeft, Play, Save, Settings, Layers, 
   Code, Box, Image as ImageIcon, FileText, 
-  MessageSquare, Terminal, Send, Loader2, Sparkles
+  MessageSquare, Terminal, Send, Loader2, Sparkles, Check
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
-
+import EditorCode from 'react-simple-code-editor';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/themes/prism-tomorrow.css';
 import { createInoxAiSdk } from '../lib/ai-sdk/inoxAiSdk';
 
 // Inicializar SDK
@@ -18,7 +21,7 @@ const aiSdk = createInoxAiSdk({
 
 export default function Editor() {
   const navigate = useNavigate();
-  const { currentProject, user, setActiveModelUrl } = useStore();
+  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode } = useStore();
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
   
   // AI Assistant State
@@ -97,9 +100,24 @@ export default function Editor() {
             setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao gerar o modelo 3D." }]);
           }
         }
-      } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código')) {
-        aiResponse = "Gerando o script de comportamento... \n\nVou adicionar a lógica no seu painel de código para que possamos testar no Viewport.";
+      } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código') || userMessage.toLowerCase().includes('lógica')) {
+        aiResponse = "Gerando o script de comportamento... \n\nVou adicionar a lógica no seu painel de código para que possamos testar.";
         setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+
+        // 1. Inicia requisição de chat real para gerar código
+        const chatResponse = await aiSdk.chat({
+          projectId: currentProject?.id || 'temp',
+          message: userMessage
+        });
+
+        if (chatResponse.activeCode) {
+          setActiveCode(chatResponse.activeCode);
+          setActiveTab('code');
+          setMessages(prev => [...prev, { role: 'assistant', content: "✅ Script gerado e injetado na aba de Código com sucesso!" }]);
+        } else {
+          setMessages(prev => [...prev, { role: 'assistant', content: chatResponse.response }]);
+        }
+
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
       }
@@ -251,19 +269,32 @@ export default function Editor() {
                 <Viewport3D />
               </div>
             ) : (
-              <div className="w-full h-full rounded-xl border border-slate-700/50 bg-slate-950 flex flex-col overflow-hidden">
-                <div className="h-10 bg-slate-800/80 border-b border-slate-700/50 flex items-center px-4">
-                  <span className="text-sm font-mono text-slate-400">main.js</span>
+              <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl">
+                <div className="h-10 bg-slate-800 border-b border-slate-700/50 flex items-center justify-between px-4">
+                  <span className="text-sm font-mono text-slate-300">main.js</span>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span className="text-[10px] text-green-400 font-mono">Sincronizado</span>
+                  </div>
                 </div>
-                <div className="flex-1 p-4 font-mono text-sm text-slate-300 overflow-auto">
-                  <p><span className="text-purple-400">import</span> {'{ Engine }'} <span className="text-purple-400">from</span> <span className="text-green-400">'@inox/core'</span>;</p>
-                  <br/>
-                  <p><span className="text-blue-400">const</span> game = <span className="text-purple-400">new</span> Engine({'{'}</p>
-                  <p className="pl-4">canvas: document.getElementById(<span className="text-green-400">'game-canvas'</span>),</p>
-                  <p className="pl-4">physics: <span className="text-orange-400">true</span></p>
-                  <p>{'});'}</p>
-                  <br/>
-                  <p>game.start();</p>
+                <div className="flex-1 overflow-auto custom-scrollbar relative">
+                  <EditorCode
+                    value={activeCode || `import { Engine } from '@inox/core';\n\nconst game = new Engine({\n  canvas: document.getElementById('game-canvas'),\n  physics: true\n});\n\ngame.start();`}
+                    onValueChange={code => setActiveCode(code)}
+                    highlight={code => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
+                    padding={20}
+                    className="font-mono text-sm h-full"
+                    style={{
+                      fontFamily: '"Fira Code", "JetBrains Mono", monospace',
+                      fontSize: 14,
+                      backgroundColor: '#1d1f21',
+                      color: '#c5c8c6',
+                      minHeight: '100%'
+                    }}
+                  />
                 </div>
               </div>
             )}

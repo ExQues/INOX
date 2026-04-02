@@ -84,7 +84,29 @@ Para a **Iteração 4**, o foco deve ser UI e gerenciamento.
 
 ### 3. Análise de Resultados e Próximos Passos
 A "ponte humana" está finalizada. O desenvolvedor consegue pedir para a IA gerar o modelo, a IA salva na nuvem, o modelo aparece na lista de assets, e o desenvolvedor clica nele para visualizar no Viewport3D a hora que quiser.
+Para a **Iteração 5**, o foco deve ser o gerador de lógica de scripts.
 
-**Possíveis focos para a Iteração 5:**
-1. **Integração Unreal Engine:** Adaptar o script Python para consultar essa mesma lista de assets do Supabase e realizar o "Sync" para a pasta do projeto UE5 físico.
-2. **Gerador de Lógica (Scripts):** Expandir a lógica do chat para que, ao invés de gerar um modelo 3D, ele consiga injetar scripts (JavaScript/Three.js) diretamente na aba "Código" do Editor, fazendo o cubo/modelo pular, atirar, etc.
+---
+
+## Iteração 5: Geração e Injeção de Scripts (Lógica)
+
+**Objetivo:** Dar ao Assistente IA a capacidade não apenas de gerar modelos 3D, mas de gerar scripts de comportamento (código) e injetá-los diretamente no Editor de Código da IDE para que o usuário possa testar e editar.
+
+### 1. Implementação
+- **Bibliotecas Adicionadas:** Instalação do `react-simple-code-editor` e `prismjs` para transformar a tela estática de "Código" em um editor de código interativo, com syntax highlight para JavaScript/TypeScript.
+- **Evolução do Controller (`aiController.ts`):** O endpoint `chatWithAi` foi aprimorado. Agora, quando ele chama a função interna `generateGameCode`, ele extrai o arquivo principal gerado (ex: `main.js` ou `index.js`) e retorna esse texto puro sob a nova propriedade `activeCode`.
+- **Evolução do Estado (`useStore.ts`):** Criada a propriedade `activeCode` no estado global, similar ao `activeModelUrl`. Isso permite que o código injetado pela IA seja lido por toda a aplicação.
+- **Integração no Editor (`Editor.tsx`):**
+  - O componente `EditorCode` (baseado em PrismJS) substituiu as divs estáticas de HTML que simulavam um código.
+  - O Chat do Assistente IA foi atualizado. Se o usuário digitar algo como *"crie um script de pulo"* ou *"lógica de movimento"*, o frontend aciona o método `aiSdk.chat()`.
+  - Ao receber a resposta, o frontend salva o código gerado via `setActiveCode()`, muda automaticamente para a aba "Código" (`setActiveTab('code')`), e o script gerado aparece lindamente formatado e editável na tela.
+
+### 2. Testes e Validação
+- Compilação (`tsc --noEmit`) rodou com sucesso após instalação das tipagens `@types/prismjs`.
+- A mudança automática de abas (Preview -> Código) ao fim da geração traz uma excelente experiência de usuário (UX fluída).
+
+### 3. Análise de Resultados e Próximos Passos
+Esta iteração consolida o INOX Game Creator como uma IDE completa. O chat agora atua nos dois pilares de um jogo: **Assets (3D)** e **Lógica (Scripts)**.
+Para a **Iteração 6**, o próximo desafio lógico é:
+1. **Execução de Código Seguro:** Como fazer o Viewport3D (Three.js) "ler" esse código JavaScript que a IA acabou de gerar na aba de código e executar ele no modelo 3D atual, sem quebrar a aplicação React (usando `eval` de forma segura ou um iframe).
+2. **Integração Unreal Engine:** Fazer o "Push to Unreal". Botão que pega o modelo 3D atual + o script ativo e manda pro script Python gerar os arquivos nativos na UE5.
