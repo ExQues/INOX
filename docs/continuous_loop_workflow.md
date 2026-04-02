@@ -132,7 +132,30 @@ Para a **Iteração 6**, o próximo desafio lógico é a execução.
 
 ### 3. Análise de Resultados e Próximos Passos
 Temos um motor completo rodando no navegador! A IA gera o modelo 3D, a IA gera o script, e a nossa engine junta os dois em tempo de execução usando o botão Play. Isso cumpre perfeitamente a visão do projeto INOX.
+Para a **Iteração 7**, o foco deve ser expandir de "um modelo" para "uma cena".
 
-**Próximos passos possíveis para a Iteração 7:**
-1. **Ponte com a Unreal Engine (Push to AAA):** Pegar esse mesmo pacote (Modelo 3D + Script JS convertido para Blueprint/C++) e enviar para o nosso script Python conectar na Unreal Engine 5.
-2. **Integração de Controles de Teclado/Mouse:** Adicionar listeners no contexto da Engine para que o usuário possa escrever scripts que reajam às setas do teclado (ex: WASD para mover o personagem gerado pela IA).
+---
+
+## Iteração 7: Arquitetura de Cena (Múltiplos Objetos 3D)
+
+**Objetivo:** Evoluir o Viewport3D de um simples "visualizador de um único modelo" para um verdadeiro "Scene Graph" capaz de instanciar, renderizar e gerenciar dezenas de objetos 3D simultaneamente na tela.
+
+### 1. Implementação
+- **Scene Graph no Estado Global:** O arquivo `useStore.ts` foi atualizado para introduzir a interface `SceneObject` e o array `sceneObjects`. Isso substitui o paradigma limitante da variável singular `activeModelUrl`.
+- **Refatoração do Viewport3D (`Viewport3D.tsx`):**
+  - Implementado um segundo `useEffect` encarregado exclusivamente de monitorar o array `sceneObjects`.
+  - Ao detectar um novo objeto no estado, o Viewport usa o `GLTFLoader` para buscar o arquivo da nuvem e adiciona-o à `scene` do Three.js.
+  - Ao mesmo tempo, ele armazena a referência física desse objeto em um mapa interno (`sceneModelsRef`) para atualizações futuras (posição, rotação).
+- **Injeção de Múltiplos Assets (`Editor.tsx`):** O clique em um Asset na barra lateral parou de fazer "replace" e passou a fazer "append". Cada clique em um asset (ex: modelo do Dragão) dispara o `addSceneObject()`, instanciando aquele modelo na cena em uma posição aleatória no grid para não sobrepor outros modelos.
+- **Engine API (`engineContextRef`):** O script da engine foi atualizado para exportar `getSceneObjects()`, permitindo que os scripts JavaScript gerados pela IA consigam iterar sobre todos os objetos da cena.
+
+### 2. Testes e Validação
+- TypeScript checado via `tsc --noEmit` validou com sucesso as tipagens estritas de array e instâncias do Three.js.
+- Cenário testado: clicar 5 vezes em um asset na barra lateral resulta no carregamento de 5 instâncias visíveis independentes espalhadas pelo mapa 3D.
+
+### 3. Análise de Resultados e Próximos Passos
+A Engine agora suporta **Composição de Cena**. Você pode criar paredes, tetos, inimigos e o jogador, montando uma fase inteira no navegador.
+
+**Oportunidades para a Iteração 8:**
+1. **Transform Controls:** Adicionar manipuladores visuais (setas de arrastar) ao clicar em um modelo no Viewport3D, permitindo que o usuário mova o modelo com o mouse (Translação, Rotação e Escala) em vez de apenas scripts.
+2. **Sistema de Física (Cannon.js):** Fazer os objetos adicionados à cena respeitarem gravidade e colisões, um requisito básico de qualquer game engine.

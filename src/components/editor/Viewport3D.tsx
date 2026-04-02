@@ -14,11 +14,14 @@ export default function Viewport3D() {
   const animationFrameId = useRef<number | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
   
+  // Track multiple models in the scene
+  const sceneModelsRef = useRef<{ [id: string]: THREE.Object3D }>({});
+  
   // Execution Context Refs
   const userScriptRef = useRef<Function | null>(null);
   const engineContextRef = useRef<any>(null);
 
-  const { activeModelUrl, activeCode } = useStore();
+  const { activeModelUrl, sceneObjects, activeCode } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -99,6 +102,7 @@ export default function Viewport3D() {
       camera,
       THREE,
       getModel: () => modelRef.current,
+      getSceneObjects: () => sceneModelsRef.current,
       getDeltaTime: () => 0.016, // Simplified for demo
     };
 
@@ -118,7 +122,7 @@ export default function Viewport3D() {
         }
       } else {
         // Rotate model slightly if it's the default cube and not playing
-        if (modelRef.current && !activeModelUrl) {
+        if (modelRef.current && !activeModelUrl && sceneObjects.length === 0) {
           modelRef.current.rotation.x += 0.01;
           modelRef.current.rotation.y += 0.01;
         }
@@ -167,11 +171,11 @@ export default function Viewport3D() {
     };
   }, []);
 
-  // Handle activeModelUrl Changes
+  // Handle activeModelUrl Changes (Single Object Preview Mode)
   useEffect(() => {
     if (!sceneRef.current) return;
     
-    // Clear current model
+    // Clear current main model
     if (modelRef.current) {
       sceneRef.current.remove(modelRef.current);
       modelRef.current = null;
@@ -224,8 +228,8 @@ export default function Viewport3D() {
           setIsLoadingModel(false);
         }
       );
-    } else {
-      // Re-add default cube
+    } else if (sceneObjects.length === 0) {
+      // Re-add default cube ONLY if no scene objects and no active preview model
       const geometry = new THREE.BoxGeometry(1, 1, 1);
       const material = new THREE.MeshStandardMaterial({ 
         color: '#8b5cf6', 
@@ -238,7 +242,65 @@ export default function Viewport3D() {
       sceneRef.current.add(cube);
       modelRef.current = cube;
     }
-  }, [activeModelUrl]);
+  }, [activeModelUrl, sceneObjects.length]);
+
+  // Handle Scene Graph Changes (Multiple Objects Mode)
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    
+    // 1. Remove objects that are no longer in the state
+    Object.keys(sceneModelsRef.current).forEach((id) => {
+      const existsInState = sceneObjects.some(obj => obj.id === id);
+      if (!existsInState) {
+        sceneRef.current?.remove(sceneModelsRef.current[id]);
+        delete sceneModelsRef.current[id];
+      }
+    });
+
+    // 2. Add new objects
+    sceneObjects.forEach((obj) => {
+      // If we already loaded it, just update position/rotation
+      if (sceneModelsRef.current[obj.id]) {
+        const model = sceneModelsRef.current[obj.id];
+        model.position.set(obj.position[0], obj.position[1], obj.position[2]);
+        model.rotation.set(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+        model.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+        return;
+      }
+
+      // Otherwise load it
+      setIsLoadingModel(true);
+      const loader = new GLTFLoader();
+      
+      loader.load(
+        obj.url,
+        (gltf) => {
+          const model = gltf.scene;
+          
+          model.position.set(obj.position[0], obj.position[1], obj.position[2]);
+          model.rotation.set(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+          model.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+          
+          model.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+
+          sceneModelsRef.current[obj.id] = model;
+          sceneRef.current?.add(model);
+          setIsLoadingModel(false);
+        },
+        undefined,
+        (error) => {
+          console.error(`Error loading scene object ${obj.name}:`, error);
+          setIsLoadingModel(false);
+        }
+      );
+    });
+    
+  }, [sceneObjects]);
 
   const handleReset = () => {
     if (controlsRef.current && cameraRef.current) {

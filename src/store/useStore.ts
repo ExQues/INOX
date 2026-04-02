@@ -40,6 +40,16 @@ interface Template {
   created_at: string;
 }
 
+export interface SceneObject {
+  id: string;
+  assetId: string;
+  name: string;
+  url: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+}
+
 interface Store {
   user: {
     id?: string;
@@ -52,7 +62,8 @@ interface Store {
   currentProject: Project | null;
   assets: Asset[];
   currentTemplate: Template | null;
-  activeModelUrl: string | null; // URL of the 3D model to preview
+  activeModelUrl: string | null; // URL of the 3D model to preview (deprecated, use sceneObjects)
+  sceneObjects: SceneObject[]; // Array of objects in the 3D scene
   activeCode: string | null; // Code currently loaded in the editor
   isLoading: boolean;
   error: string | null;
@@ -65,6 +76,9 @@ interface Store {
   setAssets: (assets: Asset[]) => void;
   setCurrentTemplate: (template: Template | null) => void;
   setActiveModelUrl: (url: string | null) => void;
+  addSceneObject: (obj: SceneObject) => void;
+  removeSceneObject: (id: string) => void;
+  clearScene: () => void;
   setActiveCode: (code: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -78,6 +92,7 @@ export const useStore = create<Store>((set) => ({
   assets: [],
   currentTemplate: null,
   activeModelUrl: null,
+  sceneObjects: [],
   activeCode: null,
   isLoading: false,
   error: null,
@@ -113,6 +128,17 @@ export const useStore = create<Store>((set) => ({
   setCurrentTemplate: (template) => set({ currentTemplate: template }),
 
   setActiveModelUrl: (url) => set({ activeModelUrl: url }),
+
+  addSceneObject: (obj) => set((state) => ({ 
+    sceneObjects: [...state.sceneObjects, obj],
+    activeModelUrl: null // clear single model when using scene
+  })),
+
+  removeSceneObject: (id) => set((state) => ({ 
+    sceneObjects: state.sceneObjects.filter(obj => obj.id !== id) 
+  })),
+
+  clearScene: () => set({ sceneObjects: [], activeModelUrl: null }),
 
   setActiveCode: (code) => set({ activeCode: code }),
 

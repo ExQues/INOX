@@ -21,7 +21,7 @@ const aiSdk = createInoxAiSdk({
 
 export default function Editor() {
   const navigate = useNavigate();
-  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode } = useStore();
+  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject } = useStore();
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
   
   // AI Assistant State
@@ -204,7 +204,18 @@ export default function Editor() {
                 projectAssets.filter(a => a.type === 'model').map((asset) => (
                   <button 
                     key={asset.id}
-                    onClick={() => setActiveModelUrl(asset.url)}
+                    onClick={() => {
+                      // Instead of replacing the active model, we add it to the scene
+                      addSceneObject({
+                        id: `instance_${Date.now()}`,
+                        assetId: asset.id,
+                        name: asset.name,
+                        url: asset.url,
+                        position: [(Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4], // Random spawn position
+                        rotation: [0, 0, 0],
+                        scale: [1, 1, 1]
+                      });
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group"
                     title={asset.name}
                   >
