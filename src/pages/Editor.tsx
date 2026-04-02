@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { 
   ArrowLeft, Play, Save, Settings, Layers, 
   Code, Box, Image as ImageIcon, FileText, 
-  MessageSquare, Terminal 
+  MessageSquare, Terminal, Send, Loader2, Sparkles
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 
@@ -12,6 +12,54 @@ export default function Editor() {
   const navigate = useNavigate();
   const { currentProject, user } = useStore();
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
+  
+  // AI Assistant State
+  const [chatMessage, setChatMessage] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [messages, setMessages] = useState([
+    { 
+      role: 'assistant', 
+      content: `Olá, ${user?.full_name?.split(' ')[0] || 'Desenvolvedor'}! Como posso ajudar a criar seu jogo hoje? Posso gerar códigos, cenários e até mesmo modelos 3D ultra-realistas para você.` 
+    }
+  ]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Handle Chat Submission
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || isGenerating) return;
+
+    const userMessage = chatMessage;
+    setChatMessage('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsGenerating(true);
+
+    // Mock AI Response generation (To be connected to backend)
+    setTimeout(() => {
+      let aiResponse = "Entendi! Vou começar a trabalhar nisso para o seu projeto.";
+      
+      // Simple keyword detection for demo
+      if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem')) {
+        aiResponse = "Iniciando o pipeline de geração 3D ultra-realista... 🚀\n\nEstou conectando à engine de geração para esculpir o modelo e gerar as texturas PBR. Assim que o arquivo .glb estiver pronto, ele será importado automaticamente para sua cena e para os assets da Unreal Engine.";
+      } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código')) {
+        aiResponse = "Gerando o script de comportamento... \n\nVou adicionar a lógica no seu painel de código para que possamos testar no Viewport.";
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      setIsGenerating(false);
+    }, 2000);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   // If no project is selected, we could redirect back to dashboard
   if (!currentProject) {
@@ -150,33 +198,69 @@ export default function Editor() {
         </main>
 
         {/* AI Assistant Sidebar (Right) */}
-        <aside className="w-80 border-l border-slate-700/50 bg-slate-800/30 flex flex-col shrink-0 hidden lg:flex">
+        <aside className="w-80 lg:w-96 border-l border-slate-700/50 bg-slate-800/30 flex flex-col shrink-0 hidden lg:flex relative">
           <div className="p-4 border-b border-slate-700/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-              <MessageSquare className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-900/50">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-white text-sm">Assistente INOX</h3>
-              <p className="text-xs text-slate-400">IA de Desenvolvimento</p>
+              <h3 className="font-semibold text-white text-sm">Assistente Rockstar</h3>
+              <p className="text-xs text-slate-400">IA Geradora de Assets e Lógica</p>
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <div className="bg-slate-700/50 rounded-xl p-3 text-sm text-slate-300 border border-slate-600/50">
-              Olá, {user?.full_name?.split(' ')[0] || 'Desenvolvedor'}! Como posso ajudar a melhorar o jogo hoje?
-            </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            {messages.map((msg, idx) => (
+              <div 
+                key={idx} 
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                <div 
+                  className={`max-w-[85%] rounded-2xl p-3 text-sm shadow-md whitespace-pre-wrap ${
+                    msg.role === 'user' 
+                      ? 'bg-purple-600 text-white rounded-tr-sm' 
+                      : 'bg-slate-700/50 text-slate-300 border border-slate-600/50 rounded-tl-sm'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+                <span className="text-[10px] text-slate-500 mt-1 px-1">
+                  {msg.role === 'user' ? 'Você' : 'Assistente IA'}
+                </span>
+              </div>
+            ))}
+            
+            {isGenerating && (
+              <div className="flex items-center gap-2 text-slate-400 p-2">
+                <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                <span className="text-xs">Processando e gerando arquivos...</span>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
           </div>
           
-          <div className="p-4 border-t border-slate-700/50">
-            <div className="relative">
-              <input 
-                type="text" 
-                placeholder="Peça para gerar um script, asset..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-white placeholder-slate-500"
+          <div className="p-4 border-t border-slate-700/50 bg-slate-800/50">
+            <div className="relative flex items-end gap-2 bg-slate-900 border border-slate-700 rounded-xl p-2 focus-within:ring-1 focus-within:ring-purple-500 focus-within:border-purple-500 transition-all">
+              <textarea 
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Ex: Crie um dragão ultra-realista 3D..."
+                className="w-full bg-transparent text-sm text-white placeholder-slate-500 resize-none outline-none max-h-32 min-h-[40px] custom-scrollbar"
+                rows={1}
+                disabled={isGenerating}
               />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-700 rounded-md transition">
-                <Terminal className="w-4 h-4 text-slate-400" />
+              <button 
+                onClick={handleSendMessage}
+                disabled={!chatMessage.trim() || isGenerating}
+                className="p-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg transition-colors shrink-0 flex items-center justify-center"
+              >
+                <Send className="w-4 h-4" />
               </button>
+            </div>
+            <div className="mt-2 text-[10px] text-center text-slate-500">
+              O assistente pode gerar Modelos 3D, Texturas PBR e Scripts C++/JS.
             </div>
           </div>
         </aside>
