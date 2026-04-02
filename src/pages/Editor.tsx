@@ -6,6 +6,7 @@ import {
   Code, Box, Image as ImageIcon, FileText, 
   MessageSquare, Terminal 
 } from 'lucide-react';
+import Viewport3D from '../components/editor/Viewport3D';
 
 export default function Editor() {
   const navigate = useNavigate();
@@ -123,13 +124,10 @@ export default function Editor() {
           </div>
 
           {/* Workspace Area */}
-          <div className="flex-1 p-4 flex items-center justify-center">
+          <div className="flex-1 p-4 flex items-center justify-center pt-16">
             {activeTab === 'preview' ? (
-              <div className="w-full h-full rounded-xl border border-slate-700/50 bg-slate-950 flex items-center justify-center overflow-hidden relative group">
-                <div className="text-center">
-                  <Play className="w-16 h-16 text-slate-700 mx-auto mb-4 group-hover:text-slate-500 transition-colors" />
-                  <p className="text-slate-500">A visualização 3D do seu jogo aparecerá aqui.</p>
-                </div>
+              <div className="w-full h-full rounded-xl border border-slate-700/50 bg-slate-950 flex items-center justify-center overflow-hidden relative shadow-2xl">
+                <Viewport3D />
               </div>
             ) : (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-slate-950 flex flex-col overflow-hidden">
