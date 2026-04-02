@@ -77,6 +77,7 @@ interface Store {
   setCurrentTemplate: (template: Template | null) => void;
   setActiveModelUrl: (url: string | null) => void;
   addSceneObject: (obj: SceneObject) => void;
+  updateSceneObject: (id: string, updates: Partial<SceneObject>) => void;
   removeSceneObject: (id: string) => void;
   clearScene: () => void;
   setActiveCode: (code: string | null) => void;
@@ -132,6 +133,12 @@ export const useStore = create<Store>((set) => ({
   addSceneObject: (obj) => set((state) => ({ 
     sceneObjects: [...state.sceneObjects, obj],
     activeModelUrl: null // clear single model when using scene
+  })),
+
+  updateSceneObject: (id, updates) => set((state) => ({
+    sceneObjects: state.sceneObjects.map(obj => 
+      obj.id === id ? { ...obj, ...updates } : obj
+    )
   })),
 
   removeSceneObject: (id) => set((state) => ({ 

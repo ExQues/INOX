@@ -155,7 +155,30 @@ Para a **Iteração 7**, o foco deve ser expandir de "um modelo" para "uma cena"
 
 ### 3. Análise de Resultados e Próximos Passos
 A Engine agora suporta **Composição de Cena**. Você pode criar paredes, tetos, inimigos e o jogador, montando uma fase inteira no navegador.
+Para a **Iteração 8**, o foco deve ser interatividade (manipulação visual).
 
-**Oportunidades para a Iteração 8:**
-1. **Transform Controls:** Adicionar manipuladores visuais (setas de arrastar) ao clicar em um modelo no Viewport3D, permitindo que o usuário mova o modelo com o mouse (Translação, Rotação e Escala) em vez de apenas scripts.
-2. **Sistema de Física (Cannon.js):** Fazer os objetos adicionados à cena respeitarem gravidade e colisões, um requisito básico de qualquer game engine.
+---
+
+## Iteração 8: Manipulação Visual da Cena (TransformControls)
+
+**Objetivo:** Fornecer ao usuário a capacidade de selecionar modelos 3D clicando neles no Viewport e arrastá-los (mover, rotacionar, escalar) visualmente usando o mouse, sem precisar digitar coordenadas em scripts.
+
+### 1. Implementação
+- **Atualização do Store (`useStore.ts`):** Adicionado o método `updateSceneObject` para permitir modificações granulares de posição, rotação e escala em objetos específicos que já estão na cena.
+- **Raycaster de Seleção:** Implementei a classe `THREE.Raycaster` no `Viewport3D.tsx`. Agora, ao clicar no Viewport (`pointerdown`), a engine lança um raio da câmera até o mouse. Se bater em um objeto gerenciado pela cena, ele identifica o ID desse objeto.
+- **TransformControls (A Mágica Visual):** Integrei a biblioteca oficial `TransformControls` do Three.js. 
+  - Quando o Raycaster detecta um clique em um modelo, o `TransformControls` se acopla (attach) a esse modelo, exibindo as setas coloridas XYZ na tela.
+  - Adicionado um painel flutuante de botões (Mover, Rotacionar, Escalar) que só aparece quando um objeto está selecionado.
+- **Sincronização com o Estado Global:** Para garantir persistência, escutei o evento `dragging-changed`. Quando o usuário termina de arrastar o modelo, as novas coordenadas (XYZ) são salvas imediatamente no estado global do Zustand (`sceneObjects`).
+- **Segurança de Execução:** Quando o usuário aperta o botão "Play" para executar o script, os controles de transformação são automaticamente ocultados e desativados (`detach()`) para não interferirem na simulação da física ou nos scripts.
+
+### 2. Testes e Validação
+- O TypeScript confirmou a tipagem dos eventos do TransformControls e das referências aos nós (meshes) internos do GLTF.
+- O clique em um espaço vazio desfaz a seleção perfeitamente.
+
+### 3. Análise de Resultados e Próximos Passos
+Agora a IDE Inox se assemelha muito ao layout base do Unity ou Unreal. O usuário pode popular a fase arrastando assets e organizá-los clicando e puxando as setinhas na tela. 
+
+**Oportunidades para a Iteração 9:**
+1. **Salvar Cena na Nuvem:** Criar um botão "Save" no cabeçalho do Editor que pega esse array `sceneObjects` com as posições modificadas pelo usuário e salva na coluna `code_structure` do Supabase Database, para que a fase carregue pronta no dia seguinte.
+2. **Ponte Python Unreal (Exportar Cena):** Pegar esse estado da cena (quais modelos e onde eles estão) e exportar o JSON para que o `ai_bridge.py` construa exatamente a mesma fase no Unreal Engine 5.

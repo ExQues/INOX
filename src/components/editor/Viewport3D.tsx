@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { useStore } from '../../store/useStore';
-import { RefreshCw, Maximize2, Loader2, Play, Square } from 'lucide-react';
+import { RefreshCw, Maximize2, Loader2, Play, Square, Move, RotateCw, Scaling } from 'lucide-react';
 
 export default function Viewport3D() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -11,6 +12,7 @@ export default function Viewport3D() {
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const transformControlsRef = useRef<TransformControls | null>(null);
   const animationFrameId = useRef<number | null>(null);
   const modelRef = useRef<THREE.Object3D | null>(null);
   
@@ -21,10 +23,12 @@ export default function Viewport3D() {
   const userScriptRef = useRef<Function | null>(null);
   const engineContextRef = useRef<any>(null);
 
-  const { activeModelUrl, sceneObjects, activeCode } = useStore();
+  const { activeModelUrl, sceneObjects, activeCode, updateSceneObject } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingModel, setIsLoadingModel] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
 
   // Initialize Engine
   useEffect(() => {
@@ -96,6 +100,74 @@ export default function Viewport3D() {
     controls.dampingFactor = 0.05;
     controlsRef.current = controls;
 
+    // Add TransformControls for object manipulation
+    const transformControls = new TransformControls(camera, renderer.domElement);
+    transformControls.addEventListener('dragging-changed', (event) => {
+      controls.enabled = !event.value; // Disable OrbitControls while dragging
+      
+      // Save state when dragging stops
+      if (!event.value && transformControls.object) {
+        const obj = transformControls.object;
+        const id = Object.keys(sceneModelsRef.current).find(key => sceneModelsRef.current[key] === obj);
+        
+        if (id) {
+          updateSceneObject(id, {
+            position: [obj.position.x, obj.position.y, obj.position.z],
+            rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
+            scale: [obj.scale.x, obj.scale.y, obj.scale.z]
+          });
+        }
+      }
+    });
+    scene.add(transformControls.getHelper());
+    transformControlsRef.current = transformControls;
+
+    // Setup Raycaster for selection
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const onMouseClick = (event: MouseEvent) => {
+      if (!containerRef.current || isPlaying) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      // Check intersections with all scene models
+      const interactableObjects = Object.values(sceneModelsRef.current);
+      const intersects = raycaster.intersectObjects(interactableObjects, true);
+
+      if (intersects.length > 0) {
+        // Find the root object of the selected mesh
+        let selectedRoot = intersects[0].object;
+        while (selectedRoot.parent && selectedRoot.parent !== scene) {
+          // If we found a known scene model, break
+          if (Object.values(sceneModelsRef.current).includes(selectedRoot)) {
+            break;
+          }
+          selectedRoot = selectedRoot.parent;
+        }
+
+        // Check if we found a valid model and attach transform controls
+        const selectedId = Object.keys(sceneModelsRef.current).find(key => sceneModelsRef.current[key] === selectedRoot);
+        
+        if (selectedId) {
+          transformControls.attach(selectedRoot);
+          setSelectedObjectId(selectedId);
+        }
+      } else {
+        // Only detach if we click on empty space (not dragging the transform controls itself)
+        if (!transformControls.dragging) {
+          transformControls.detach();
+          setSelectedObjectId(null);
+        }
+      }
+    };
+
+    renderer.domElement.addEventListener('pointerdown', onMouseClick);
+
     // Create Engine Context for user scripts
     engineContextRef.current = {
       scene,
@@ -160,6 +232,11 @@ export default function Viewport3D() {
       
       if (controlsRef.current) {
         controlsRef.current.dispose();
+      }
+
+      if (transformControlsRef.current) {
+        transformControlsRef.current.detach();
+        transformControlsRef.current.dispose();
       }
 
       if (rendererRef.current && rendererRef.current.domElement.parentNode) {
@@ -302,6 +379,24 @@ export default function Viewport3D() {
     
   }, [sceneObjects]);
 
+  // Handle Transform Mode changes
+  useEffect(() => {
+    if (transformControlsRef.current) {
+      transformControlsRef.current.setMode(transformMode);
+    }
+  }, [transformMode]);
+
+  // Disable controls when playing
+  useEffect(() => {
+    if (transformControlsRef.current) {
+      if (isPlaying) {
+        transformControlsRef.current.detach();
+      } else if (selectedObjectId && sceneModelsRef.current[selectedObjectId]) {
+        transformControlsRef.current.attach(sceneModelsRef.current[selectedObjectId]);
+      }
+    }
+  }, [isPlaying, selectedObjectId]);
+
   const handleReset = () => {
     if (controlsRef.current && cameraRef.current) {
       controlsRef.current.target.set(0, 0, 0);
@@ -384,6 +479,32 @@ export default function Viewport3D() {
 
       {/* Engine Overlay UI */}
       <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!isPlaying && selectedObjectId && (
+          <div className="flex bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700 mr-2 overflow-hidden shadow-lg">
+            <button 
+              onClick={() => setTransformMode('translate')}
+              className={`p-2 transition ${transformMode === 'translate' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+              title="Mover (T)"
+            >
+              <Move className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setTransformMode('rotate')}
+              className={`p-2 transition ${transformMode === 'rotate' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+              title="Rotacionar (R)"
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setTransformMode('scale')}
+              className={`p-2 transition ${transformMode === 'scale' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}`}
+              title="Escalar (S)"
+            >
+              <Scaling className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <button 
           onClick={togglePlay}
           className={`flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg transition shadow-lg border border-slate-700 ${
