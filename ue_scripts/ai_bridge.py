@@ -90,10 +90,10 @@ def spawn_cinematic_character(config):
 def sync_scene_from_web(config):
     """
     Sincroniza o scene_graph (JSON do Three.js) com a Unreal Engine 5.
-    Faz a conversão de coordenadas e (mock) importação dos assets.
+    Faz a conversão de coordenadas e (mock) importação dos assets via Quixel Bridge.
     """
     print("--------------------------------------------------")
-    print(f"[AI-BRIDGE] Sincronizando cena Web para Unreal Engine: {config.get('name', 'SyncMap')}")
+    print(f"[AI-BRIDGE] Sincronizando cena de Blockout para Unreal Engine: {config.get('name', 'SyncMap')}")
 
     editor_level_lib = unreal.EditorLevelLibrary
     scene_objects = config.get("scene_objects", [])
@@ -105,6 +105,7 @@ def sync_scene_from_web(config):
     for obj in scene_objects:
         obj_name = obj.get("name", "UnknownMesh")
         url = obj.get("url", "")
+        asset_type = "Megascans_Rock" if "rock" in obj_name.lower() else "Generic_Mesh"
         
         # Web (Three.js) uses Right-Handed Y-Up (X: right, Y: up, Z: forward/backward)
         # Unreal uses Left-Handed Z-Up (X: forward, Y: right, Z: up)
@@ -130,15 +131,15 @@ def sync_scene_from_web(config):
         ue_scale_z = float(scale.get("y", 1))
         actor_scale = unreal.Vector(ue_scale_x, ue_scale_y, ue_scale_z)
 
-        print(f"[AI-BRIDGE] Objeto: {obj_name} | URL: {url}")
+        print(f"[AI-BRIDGE] Blockout Proxy: {obj_name}")
         print(f"            Transform UE5 -> Loc: {location}, Rot: {rotation}, Scale: {actor_scale}")
         
-        # Mock of spawning object (Using a placeholder Cube if available, or just printing)
+        # Mock of spawning high-quality object (Quixel/MetaHuman) based on the blockout
         try:
-            print(f"[AI-BRIDGE] 📥 Simulando download do GLB e importação via AssetImportTask...")
-            print(f"[AI-BRIDGE] ✅ {obj_name} instanciado no level.")
+            print(f"[AI-BRIDGE] 📥 Simulando requisição ao Quixel Bridge para asset AAA de '{asset_type}'...")
+            print(f"[AI-BRIDGE] ✅ Versão 8K de {obj_name} com material PBR instanciada no level.")
         except Exception as e:
-            print(f"[AI-BRIDGE] Falha ao instanciar objeto na UE5: {e}")
+            print(f"[AI-BRIDGE] Falha ao instanciar asset AAA na UE5: {e}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

@@ -251,3 +251,21 @@ O usuário agora pode desenhar níveis inteiros no seu navegador, pelo celular o
 
 ### 3. Análise de Resultados e Próximos Passos
 O INOX Game Creator Web passa de um simples visualizador 3D para um Sandbox Interativo. Os usuários e as IAs agora podem codificar comportamentos reais (como pular, atirar projéteis, ou criar veículos) e testá-los instantaneamente. O ciclo contínuo de evolução segue focado em melhorar a colaboração e as capacidades gerativas de materiais no futuro.
+
+---
+
+## Iteração 12: O Pivot para Orquestração AAA (Megascans & MetaHumans)
+
+**Objetivo:** Alterar a filosofia do motor. Em vez de gerar "lixo poligonal" do zero usando Text-to-3D, a IA agora atua como uma Diretora de Arte que orquestra assets de altíssima qualidade (Quixel Megascans, MetaHumans) e os injeta na Unreal Engine 5. O Editor Web passa a ser usado estritamente como um ambiente de **Blockout** (Prototipação Tática).
+
+### 1. Implementação
+- **Refatoração do Documento Arquitetônico:** O `arquitetura_geracao_3d.md` foi reescrito para refletir a nova visão de "Orquestração de Assets AAA" descartando a geração de malhas via Meshy/Tripo para projetos de grande porte.
+- **Backend (Mock de Orquestração):** O `aiService.ts` foi atualizado. As funções `request3DModelGeneration` e `check3DModelStatus` agora simulam a busca e seleção de metadados em bibliotecas AAA. Em vez de gerar, a IA "encontra" o asset perfeito (ex: "Megascans_Rock_v1") e retorna um modelo "Proxy" leve (gltf) para o navegador.
+- **Editor Web (Aba Chat):** As mensagens do assistente de IA em `Editor.tsx` foram atualizadas para refletir o novo vocabulário. O chat agora diz: *"Analisando a biblioteca de Assets AAA..."* e informa que adicionou uma versão Proxy (low-poly) ao Blockout Web, e que a versão 8K real será usada na Sincronização.
+- **Ponte Unreal (`ai_bridge.py`):** A lógica de sincronização foi atualizada. Durante a iteração da `scene_graph`, o script agora imprime que está recebendo o *Blockout Proxy* e realiza um mock de download/importação da versão PBR 8K via integração com o Quixel Bridge.
+
+### 2. Testes e Validação
+- O fluxo conceitual foi estabelecido em código: Solicitação (Prompt) -> Decisão de IA (Qual asset Quixel usar) -> Proxy carregado no React -> Coordenadas salvas no Supabase -> Envio para o script Python -> (Futuro) Importação via Unreal Python API.
+
+### 3. Análise de Resultados e Próximos Passos
+Esse pivot é o passo mais importante do INOX. Ele quebra a barreira do "visual de jogo de celular" que as plataformas de IA generativas atuais sofrem, e alinha a ferramenta ao pipeline de estúdios profissionais. Para as próximas iterações, focaremos em robustecer essa ponte (conectar realmente ao plugin do Megascans na UE5) ou melhorar a usabilidade da montagem de cena no Web Editor.

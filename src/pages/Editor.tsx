@@ -126,11 +126,11 @@ export default function Editor() {
       let aiResponse = "Entendi! Vou começar a trabalhar nisso para o seu projeto.";
       
       // Keyword detection for demo
-      if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem')) {
-        aiResponse = "Iniciando o pipeline de geração 3D ultra-realista via API... 🚀\n\nEstou conectando à engine de geração para esculpir o modelo e gerar as texturas PBR.";
+      if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem') || userMessage.toLowerCase().includes('rocha') || userMessage.toLowerCase().includes('floresta')) {
+        aiResponse = "Analisando a biblioteca de Assets AAA (Quixel Megascans/MetaHumans)... 🚀\n\nVou buscar os modelos perfeitos e adicionar as versões 'Proxy' (low-poly) no seu Blockout web.";
         setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
 
-        // 1. Inicia a requisição de geração
+        // 1. Inicia a requisição de busca/orquestração
         const generationRequest = await aiSdk.generate3DModel({
           prompt: userMessage,
           projectId: currentProject?.id || 'temp-project',
@@ -147,10 +147,10 @@ export default function Editor() {
           
           if (result.status === 'completed' && result.modelUrl) {
             setActiveModelUrl(result.modelUrl);
-            setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado, salvo na nuvem e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "✅ O Proxy do asset AAA foi adicionado ao seu Blockout! A versão 8K real será injetada quando você sincronizar com a Unreal Engine 5." }]);
             loadAssets(); // Refresh assets list
           } else {
-            setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao gerar o modelo 3D." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao buscar o asset AAA." }]);
           }
         }
       } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código') || userMessage.toLowerCase().includes('lógica')) {

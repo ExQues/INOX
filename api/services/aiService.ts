@@ -386,7 +386,7 @@ Return as complete, modular code.`;
   });
 }
 
-// --- 3D Generation Services (Mocking External APIs for now) ---
+// --- 3D Generation Services (Pivot para Orquestração Quixel/AAA) ---
 
 export interface Generate3DOptions {
   prompt: string;
@@ -398,37 +398,38 @@ export interface Generated3DModel {
   thumbnailUrl?: string;
   status: 'processing' | 'completed' | 'failed';
   taskId: string;
+  isAAAAsset?: boolean;
+  assetId?: string;
 }
 
-// Simulating a call to Meshy or Tripo3D API
+// Simulating the AI deciding to search Megascans/MetaHumans instead of generating bad geometry
 export async function request3DModelGeneration(options: Generate3DOptions): Promise<Generated3DModel> {
-  console.log(`[3D API] Requesting model generation for: "${options.prompt}"`);
+  console.log(`[AI Orchestrator] Analyzing prompt for AAA Asset: "${options.prompt}"`);
   
-  // In a real scenario, we would make a fetch() call to Meshy/Tripo API with the API key
-  // e.g. await fetch('https://api.meshy.ai/v1/text-to-3d', { ... })
+  // In a real scenario, the LLM would translate the prompt into Megascans tags and query the Quixel API
+  // e.g., if prompt has "floresta", search for "rock", "tree", "fern" in Quixel DB.
   
-  // Returning a mock task ID
+  // Returning a mock task ID for the orchestration task
   return {
-    taskId: `task_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    taskId: `orchestration_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
     status: 'processing',
     modelUrl: '',
   };
 }
 
-// Simulating polling the task status
+// Simulating polling the task status and returning a high-quality pre-existing asset proxy
 export async function check3DModelStatus(taskId: string): Promise<Generated3DModel> {
-  console.log(`[3D API] Checking status for task: ${taskId}`);
+  console.log(`[AI Orchestrator] Retrieving AAA Asset Proxy for task: ${taskId}`);
   
-  // Simulate network delay
+  // Simulate network delay for DB search
   await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // In a real scenario, this would query the API for the task status.
-  // For demonstration, we instantly return a "completed" status with a public GLTF model.
   
   return {
     taskId,
     status: 'completed',
-    // We use a Khronos sample model (FlightHelmet) as the "generated" realistic model
+    isAAAAsset: true,
+    assetId: "Megascans_Rock_v1", // Identifier for Unreal Engine to download the real 8K asset
+    // We use a Khronos sample model (FlightHelmet) as the "Proxy/Blockout" model for the Web Editor
     modelUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf',
   };
 }
