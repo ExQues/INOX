@@ -169,7 +169,8 @@ export const uploadAiAsset = async (req: CustomRequest, res: Response) => {
     const asset = await uploadAsset({
       projectId,
       userId: req.user?.id || 'ai-agent',
-      file,
+      file: file.buffer,
+      filename: file.originalname || `upload_${Date.now()}.asset`,
       type,
       tags: tags || [],
     });
@@ -302,12 +303,17 @@ export const generateUnrealMap = async (req: CustomRequest, res: Response) => {
 
 export const generate3DModel = async (req: CustomRequest, res: Response) => {
   try {
-    const { prompt, style } = req.body;
+    const { prompt, style, projectId } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required to save the generated asset' });
+    }
+
+    // Pass projectId as part of the task metadata if needed by the service
     const task = await request3DModelGeneration({ prompt, style });
     
     res.json({
@@ -321,15 +327,38 @@ export const generate3DModel = async (req: CustomRequest, res: Response) => {
   }
 };
 
+import { downloadAndSaveGeneratedModel } from '../services/assetService.js';
+
 export const get3DModelStatus = async (req: CustomRequest, res: Response) => {
   try {
     const { taskId } = req.params;
+    const { projectId, prompt } = req.query; // Expecting these from frontend to know where to save
 
     if (!taskId) {
       return res.status(400).json({ error: 'Task ID is required' });
     }
 
     const status = await check3DModelStatus(taskId);
+
+    // Se o modelo foi concluído com sucesso e temos o contexto do projeto, salvamos no banco
+    if (status.status === 'completed' && status.modelUrl && projectId && prompt) {
+      try {
+        const userId = req.user?.id || 'ai-agent';
+        console.log(`[AssetService] Downloading and saving model for project ${projectId}...`);
+        
+        const savedAsset = await downloadAndSaveGeneratedModel(
+          status.modelUrl,
+          projectId as string,
+          userId,
+          prompt as string
+        );
+
+        // Retornamos a URL permanente do Supabase em vez da URL temporária da IA
+        status.modelUrl = savedAsset.url;
+      } catch (saveError) {
+        console.error('Failed to save asset to Supabase, falling back to temp URL:', saveError);
+      }
+    }
 
     res.json({
       success: true,

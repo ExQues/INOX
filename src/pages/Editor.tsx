@@ -58,16 +58,21 @@ export default function Editor() {
         // 1. Inicia a requisição de geração
         const generationRequest = await aiSdk.generate3DModel({
           prompt: userMessage,
+          projectId: currentProject?.id || 'temp-project',
           style: 'realistic'
         });
 
         if (generationRequest.success && generationRequest.taskId) {
-          // 2. Aguarda a conclusão (Polling via SDK)
-          const result = await aiSdk.waitFor3DModel(generationRequest.taskId);
+          // 2. Aguarda a conclusão e Salva (Polling via SDK)
+          const result = await aiSdk.waitFor3DModel(
+            generationRequest.taskId,
+            currentProject?.id || 'temp-project',
+            userMessage
+          );
           
           if (result.status === 'completed' && result.modelUrl) {
             setActiveModelUrl(result.modelUrl);
-            setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado, salvo na nuvem e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
           } else {
             setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao gerar o modelo 3D." }]);
           }

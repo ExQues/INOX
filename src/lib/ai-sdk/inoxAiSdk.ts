@@ -89,6 +89,7 @@ export interface AssetUploadResponse {
 
 export interface Generate3DModelRequest {
   prompt: string;
+  projectId: string;
   style?: 'realistic' | 'stylized' | 'low-poly';
 }
 
@@ -286,21 +287,29 @@ export class InoxAiSdk {
     });
   }
 
-  async get3DModelStatus(taskId: string): Promise<Get3DModelStatusResponse> {
-    return this.request<Get3DModelStatusResponse>(`/api/ai/generate-3d/${taskId}`, {
+  async get3DModelStatus(taskId: string, projectId?: string, prompt?: string): Promise<Get3DModelStatusResponse> {
+    const query = new URLSearchParams();
+    if (projectId) query.append('projectId', projectId);
+    if (prompt) query.append('prompt', prompt);
+    
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    
+    return this.request<Get3DModelStatusResponse>(`/api/ai/generate-3d/${taskId}${queryString}`, {
       method: 'GET',
     });
   }
 
   async waitFor3DModel(
     taskId: string,
+    projectId: string,
+    prompt: string,
     pollInterval: number = 2000,
     maxAttempts: number = 30
   ): Promise<Get3DModelStatusResponse> {
     let attempts = 0;
 
     while (attempts < maxAttempts) {
-      const status = await this.get3DModelStatus(taskId);
+      const status = await this.get3DModelStatus(taskId, projectId, prompt);
 
       if (status.status === 'completed' || status.status === 'failed') {
         return status;
