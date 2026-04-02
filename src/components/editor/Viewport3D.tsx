@@ -1,18 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useStore } from '../../store/useStore';
-import { RefreshCw, Maximize2 } from 'lucide-react';
+import { RefreshCw, Maximize2, Loader2 } from 'lucide-react';
 
 export default function Viewport3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const animationFrameId = useRef<number | null>(null);
-  const cubeRef = useRef<THREE.Mesh | null>(null);
+  const modelRef = useRef<THREE.Object3D | null>(null);
 
+  const { activeModelUrl } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLoadingModel, setIsLoadingModel] = useState(false);
 
+  // Initialize Engine
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -62,26 +68,36 @@ export default function Viewport3D() {
     scene.add(dirLight);
 
     // Default Player/Cube
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshStandardMaterial({ 
-      color: '#8b5cf6', // purple-500
-      roughness: 0.4,
-      metalness: 0.1,
-    });
-    const cube = new THREE.Mesh(geometry, material);
-    cube.position.y = 0.5;
-    cube.castShadow = true;
-    cubeRef.current = cube;
-    scene.add(cube);
+    if (!activeModelUrl) {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: '#8b5cf6', // purple-500
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.y = 0.5;
+      cube.castShadow = true;
+      modelRef.current = cube;
+      scene.add(cube);
+    }
+
+    // Add OrbitControls for user interaction
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controlsRef.current = controls;
 
     // Render Loop
     const animate = () => {
       animationFrameId.current = requestAnimationFrame(animate);
 
-      // Rotate cube as a placeholder game loop action
-      if (cubeRef.current) {
-        cubeRef.current.rotation.x += 0.01;
-        cubeRef.current.rotation.y += 0.01;
+      controls.update();
+
+      // Rotate model slightly if it's the default cube, else let user control
+      if (modelRef.current && !activeModelUrl) {
+        modelRef.current.rotation.x += 0.01;
+        modelRef.current.rotation.y += 0.01;
       }
 
       renderer.render(scene, camera);
@@ -114,21 +130,97 @@ export default function Viewport3D() {
         cancelAnimationFrame(animationFrameId.current);
       }
       
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
+
       if (rendererRef.current && rendererRef.current.domElement.parentNode) {
         rendererRef.current.domElement.parentNode.removeChild(rendererRef.current.domElement);
       }
       
       // Memory Cleanup
-      geometry.dispose();
-      material.dispose();
       renderer.dispose();
     };
   }, []);
 
+  // Handle activeModelUrl Changes
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    
+    // Clear current model
+    if (modelRef.current) {
+      sceneRef.current.remove(modelRef.current);
+      modelRef.current = null;
+    }
+
+    if (activeModelUrl) {
+      setIsLoadingModel(true);
+      const loader = new GLTFLoader();
+      
+      loader.load(
+        activeModelUrl,
+        (gltf) => {
+          const model = gltf.scene;
+          
+          // Center and scale model
+          const box = new THREE.Box3().setFromObject(model);
+          const center = box.getCenter(new THREE.Vector3());
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          
+          // Normalize scale to fit in view
+          const scale = 2 / maxDim;
+          model.scale.setScalar(scale);
+          
+          // Center position
+          model.position.sub(center.multiplyScalar(scale));
+          
+          // Add shadows
+          model.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+
+          sceneRef.current?.add(model);
+          modelRef.current = model;
+          setIsLoadingModel(false);
+          
+          // Reset camera
+          if (controlsRef.current && cameraRef.current) {
+            controlsRef.current.target.set(0, 0, 0);
+            cameraRef.current.position.set(0, 2, 5);
+            controlsRef.current.update();
+          }
+        },
+        undefined,
+        (error) => {
+          console.error('Error loading 3D model:', error);
+          setIsLoadingModel(false);
+        }
+      );
+    } else {
+      // Re-add default cube
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshStandardMaterial({ 
+        color: '#8b5cf6', 
+        roughness: 0.4,
+        metalness: 0.1,
+      });
+      const cube = new THREE.Mesh(geometry, material);
+      cube.position.y = 0.5;
+      cube.castShadow = true;
+      sceneRef.current.add(cube);
+      modelRef.current = cube;
+    }
+  }, [activeModelUrl]);
+
   const handleReset = () => {
-    if (cubeRef.current) {
-      cubeRef.current.rotation.set(0, 0, 0);
-      cubeRef.current.position.set(0, 0.5, 0);
+    if (controlsRef.current && cameraRef.current) {
+      controlsRef.current.target.set(0, 0, 0);
+      cameraRef.current.position.set(0, 2, 5);
+      controlsRef.current.update();
     }
   };
 
@@ -148,6 +240,14 @@ export default function Viewport3D() {
 
   return (
     <div className="relative w-full h-full group bg-slate-950 overflow-hidden">
+      {/* Loading Overlay */}
+      {isLoadingModel && (
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-purple-400">
+          <Loader2 className="w-10 h-10 animate-spin mb-4" />
+          <p className="text-sm font-medium animate-pulse">Carregando modelo 3D ultra-realista...</p>
+        </div>
+      )}
+
       {/* 3D Container */}
       <div ref={containerRef} className="w-full h-full outline-none" />
 

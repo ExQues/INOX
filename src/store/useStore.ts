@@ -52,6 +52,7 @@ interface Store {
   currentProject: Project | null;
   assets: Asset[];
   currentTemplate: Template | null;
+  activeModelUrl: string | null; // URL of the 3D model to preview
   isLoading: boolean;
   error: string | null;
   setUser: (user: Store['user']) => void;
@@ -62,6 +63,7 @@ interface Store {
   deleteProject: (projectId: string) => void;
   setAssets: (assets: Asset[]) => void;
   setCurrentTemplate: (template: Template | null) => void;
+  setActiveModelUrl: (url: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -73,6 +75,7 @@ export const useStore = create<Store>((set) => ({
   currentProject: null,
   assets: [],
   currentTemplate: null,
+  activeModelUrl: null,
   isLoading: false,
   error: null,
 
@@ -105,6 +108,8 @@ export const useStore = create<Store>((set) => ({
   setAssets: (assets) => set({ assets }),
 
   setCurrentTemplate: (template) => set({ currentTemplate: template }),
+
+  setActiveModelUrl: (url) => set({ activeModelUrl: url }),
 
   setLoading: (isLoading) => set({ isLoading }),
 

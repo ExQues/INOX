@@ -10,7 +10,7 @@ import Viewport3D from '../components/editor/Viewport3D';
 
 export default function Editor() {
   const navigate = useNavigate();
-  const { currentProject, user } = useStore();
+  const { currentProject, user, setActiveModelUrl } = useStore();
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
   
   // AI Assistant State
@@ -45,6 +45,13 @@ export default function Editor() {
       // Simple keyword detection for demo
       if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem')) {
         aiResponse = "Iniciando o pipeline de geração 3D ultra-realista... 🚀\n\nEstou conectando à engine de geração para esculpir o modelo e gerar as texturas PBR. Assim que o arquivo .glb estiver pronto, ele será importado automaticamente para sua cena e para os assets da Unreal Engine.";
+        
+        // Simular o tempo de geração de um modelo da Meshy ou Tripo e carregar no Viewport
+        setTimeout(() => {
+          // Usando um modelo GLB público de exemplo para demonstração
+          setActiveModelUrl('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf');
+          setMessages(prev => [...prev, { role: 'assistant', content: "✅ O modelo 3D foi gerado e importado com sucesso! Você já pode visualizá-lo e rotacioná-lo no Viewport." }]);
+        }, 3000);
       } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código')) {
         aiResponse = "Gerando o script de comportamento... \n\nVou adicionar a lógica no seu painel de código para que possamos testar no Viewport.";
       }
