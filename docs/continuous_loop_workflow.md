@@ -358,3 +358,25 @@ O ciclo de iteração contínua solidificou mais uma pilar da arquitetura web.
 
 ### 3. Análise de Resultados e Próximos Passos
 O Visualizador de Blueprint reduz o atrito psicológico entre o Sandbox Web (JavaScript) e o Produto Final (Unreal Engine 5). O desenvolvedor consegue ter a percepção imediata do que a IA construiu sem precisar dar o F5 na Engine local. O próximo passo do ciclo contínuo pode englobar um sistema de login ou versionamento das blueprints salvas.
+
+## Iteração 17: Interface Visual Interativa para Blueprint (React Flow)
+
+**Objetivo:** Elevar a qualidade visual da aba de Blueprints de uma simples "lista de divs formatadas" para um autêntico Node Graph interativo, permitindo que o usuário dê zoom, arraste a tela e visualize o fluxo dos nós como nas ferramentas No-Code modernas.
+
+### 1. Implementação
+- **Adição de Biblioteca:** Instalada a biblioteca `@xyflow/react` (antigo React Flow) para prover os alicerces do Node Graph.
+- **Componentização (`BlueprintGraph.tsx`):** A lógica de renderização que estava engordando o arquivo `Editor.tsx` foi abstraída para um componente isolado e modular.
+- **Custom Nodes (Nós Customizados):** 
+  - Criado o componente `CustomNode` que encapsula o design dark mode AAA da Unreal Engine.
+  - O nó agora possui `Handle`s (pontos de conexão) nativos do React Flow nas laterais esquerda (target) e direita (source).
+- **Parser Geométrico:** O componente agora recebe o JSON gerado pela IA e calcula dinamicamente as posições (X, Y) na tela para que os nós não fiquem sobrepostos. 
+- **Auto-Connect (Arestas/Edges):** O algoritmo cria automaticamente conexões visuais fluídas (arestas animadas) ligando um nó ao próximo, sugerindo a linha de execução do Event Graph.
+- **Ferramentas de UX:** Adicionados os subcomponentes `Background` (fundo com grade pontilhada), `Controls` (botões de Zoom In/Out e Fit View) e `MiniMap` (mapa geral no canto inferior para facilitar navegação em Blueprints gigantes).
+
+### 2. Testes e Validação
+- O fluxo de geração da IA mantém-se inalterado. Quando a IA cospe o JSON da Blueprint, a aba transita e o React Flow hidrata as dependências.
+- Foi testado o *drag and drop* dos nós na tela, atestando que as conexões (linhas roxas) acompanham o movimento do nó perfeitamente em tempo real.
+
+### 3. Análise de Resultados e Próximos Passos
+Esta atualização refina brutalmente o valor do INOX como IDE visual. Ter um Node Graph fluído a 60fps rodando nativamente no navegador mostra a viabilidade técnica de criar lógica sem digitar uma linha de código. 
+O Loop contínuo pode seguir agora para refinamento do Sandbox, autenticação real com banco de usuários ou empacotamento.

@@ -7,6 +7,7 @@ import {
   MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
+import BlueprintGraph from '../components/editor/BlueprintGraph';
 import EditorCode from 'react-simple-code-editor';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
@@ -386,67 +387,7 @@ export default function Editor() {
               </div>
             ) : activeTab === 'blueprint' ? (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl relative">
-                <div className="h-10 bg-slate-800 border-b border-slate-700/50 flex items-center justify-between px-4 shrink-0">
-                  <span className="text-sm font-mono text-slate-300">
-                    {activeBlueprint?.blueprint_name || 'BP_NewLogic'}.json
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-blue-400 font-mono">Unreal Engine Schema</span>
-                  </div>
-                </div>
-                
-                <div className="flex-1 overflow-auto custom-scrollbar p-6 bg-[#0f111a] relative">
-                  {!activeBlueprint ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                      <Workflow className="w-12 h-12 mb-4 opacity-50" />
-                      <p>Nenhuma Blueprint gerada ainda.</p>
-                      <p className="text-xs mt-2">Peça para a IA gerar uma lógica AAA para Unreal.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center min-w-max pb-20">
-                      <div className="bg-slate-800 border-2 border-blue-500/30 rounded-xl p-4 shadow-xl min-w-[300px] mb-8 relative">
-                        <div className="absolute -top-3 left-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          Event Graph
-                        </div>
-                        <h3 className="text-white font-semibold text-lg mt-2 flex items-center gap-2">
-                          <Workflow className="w-5 h-5 text-blue-400" />
-                          {activeBlueprint.blueprint_name || 'BP_Logic'}
-                        </h3>
-                      </div>
-
-                      <div className="flex flex-wrap justify-center gap-6 relative">
-                        {activeBlueprint.nodes?.map((node: any, idx: number) => (
-                          <div key={idx} className="bg-slate-800/90 border border-slate-600 rounded-lg shadow-lg w-64 shrink-0 hover:border-slate-400 transition-colors z-10 relative">
-                            <div className="h-2 w-full rounded-t-lg bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                            <div className="p-3">
-                              <h4 className="text-slate-200 font-medium text-sm flex items-center gap-2">
-                                <Box className="w-4 h-4 text-slate-400" />
-                                {node.type || 'Node'}
-                              </h4>
-                              
-                              <div className="mt-3 space-y-2">
-                                {node.properties && Object.entries(node.properties).map(([key, val]) => (
-                                  <div key={key} className="flex justify-between items-center bg-slate-900/50 px-2 py-1 rounded">
-                                    <span className="text-[10px] text-slate-400">{key}</span>
-                                    <span className="text-xs text-green-400 font-mono">{String(val)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Connectors */}
-                            <div className="absolute top-1/2 -left-2 w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 -translate-y-1/2 flex items-center justify-center">
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
-                            </div>
-                            <div className="absolute top-1/2 -right-2 w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 -translate-y-1/2 flex items-center justify-center">
-                              <div className="w-1.5 h-1.5 rounded-full bg-slate-500"></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <BlueprintGraph blueprint={activeBlueprint} />
               </div>
             ) : (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl">
