@@ -225,3 +225,29 @@ Temos um ciclo de vida de projeto 100% funcional. O INOX Game Creator já atua c
 
 ### 3. Análise de Resultados e Próximos Passos
 O usuário agora pode desenhar níveis inteiros no seu navegador, pelo celular ou tablet, e quando chegar no PC de desenvolvimento, clicar em um botão para que toda a fase se construa automaticamente na Unreal Engine 5. O Continuous Loop concluiu a base da plataforma AAA.
+
+---
+
+## Iteração 11: Integração de Física em Tempo Real (Cannon.js)
+
+**Objetivo:** Permitir que os modelos instanciados na cena do Editor web sofram ações de física real (gravidade, colisão) ao pressionar o botão Play, usando a biblioteca Cannon.js sincronizada com o Three.js.
+
+### 1. Implementação
+- **Engine de Física:** Adicionada a importação de `* as CANNON from 'cannon-es'` no `Viewport3D.tsx`.
+- **Configuração do Mundo:** O `useEffect` de inicialização cria um `CANNON.World()` com gravidade realista (`-9.82` no eixo Y) e adiciona um chão (Body estático) para que os objetos não caiam no infinito.
+- **Sincronização de Objetos:**
+  - Sempre que a IA adiciona um modelo ou o usuário carrega um asset salvo na tela, um correspondente `CANNON.Body` com uma forma de caixa (BoxShape) é criado e adicionado ao mundo da física.
+  - A engine determina dinamicamente se o objeto é estático (`mass: 0`) ou dinâmico (`mass: 1`) baseado no nome do asset (ex: conter "floor", "wall" ou "static").
+  - Quando o usuário movimenta os objetos pela UI com as setas (TransformControls), a posição e a rotação (quaternions) são repassadas ao corpo físico equivalente no Cannon.
+- **O Botão Play (Game Loop):**
+  - Quando em modo "Play", o script executa `world.step(1 / 60)` a cada frame.
+  - Imediatamente depois, a posição do `Body` do Cannon.js é copiada para o `Mesh` correspondente do Three.js, fazendo as caixas caírem e colidirem de forma realista.
+  - Ao clicar em "Stop", os objetos têm suas velocidades zeradas e retornam à posição salva no estado do Zustand (`sceneObjects`).
+- **Injeção de Código do Usuário:** O contexto `engineContextRef` foi estendido para repassar os objetos `CANNON`, `world` e as `physicsBodies` para o código do usuário/IA, permitindo que scripts criados no chat apliquem forças, impulsos ou modifiquem a gravidade.
+
+### 2. Testes e Validação
+- Compilação estática bem-sucedida, resolvendo a tipagem entre Vectors do Three.js e Vec3 do Cannon.js.
+- Cenário testado: Uma caixa colocada flutuando cai e repousa no chão ao apertar "Play". Ao apertar "Stop", ela volta a flutuar no ar, aguardando edição.
+
+### 3. Análise de Resultados e Próximos Passos
+O INOX Game Creator Web passa de um simples visualizador 3D para um Sandbox Interativo. Os usuários e as IAs agora podem codificar comportamentos reais (como pular, atirar projéteis, ou criar veículos) e testá-los instantaneamente. O ciclo contínuo de evolução segue focado em melhorar a colaboração e as capacidades gerativas de materiais no futuro.

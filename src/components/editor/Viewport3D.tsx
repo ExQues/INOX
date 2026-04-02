@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import * as CANNON from 'cannon-es';
 import { useStore } from '../../store/useStore';
 import { RefreshCw, Maximize2, Loader2, Play, Square, Move, RotateCw, Scaling } from 'lucide-react';
 
@@ -18,6 +19,10 @@ export default function Viewport3D() {
   
   // Track multiple models in the scene
   const sceneModelsRef = useRef<{ [id: string]: THREE.Object3D }>({});
+  
+  // Physics Context Refs
+  const worldRef = useRef<CANNON.World | null>(null);
+  const physicsBodiesRef = useRef<{ [id: string]: CANNON.Body }>({});
   
   // Execution Context Refs
   const userScriptRef = useRef<Function | null>(null);
@@ -38,6 +43,22 @@ export default function Viewport3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#0f172a'); // slate-900
     scene.fog = new THREE.FogExp2('#0f172a', 0.05);
+
+    // Setup Physics World
+    const world = new CANNON.World();
+    world.gravity.set(0, -9.82, 0); // Earth gravity
+    world.broadphase = new CANNON.NaiveBroadphase();
+    (world.solver as CANNON.GSSolver).iterations = 10;
+    worldRef.current = world;
+
+    // Add a default physics ground plane
+    const groundBody = new CANNON.Body({
+      mass: 0, // static
+      shape: new CANNON.Plane(),
+    });
+    // Rotate to match Three.js horizontal plane
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(groundBody);
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -173,8 +194,11 @@ export default function Viewport3D() {
       scene,
       camera,
       THREE,
+      CANNON,
+      world,
       getModel: () => modelRef.current,
       getSceneObjects: () => sceneModelsRef.current,
+      getPhysicsBodies: () => physicsBodiesRef.current,
       getDeltaTime: () => 0.016, // Simplified for demo
     };
 
@@ -183,6 +207,21 @@ export default function Viewport3D() {
       animationFrameId.current = requestAnimationFrame(animate);
 
       controls.update();
+
+      // Step Physics and sync if playing
+      if (isPlaying) {
+        world.step(1 / 60);
+
+        // Sync Cannon to Three.js
+        Object.keys(physicsBodiesRef.current).forEach((id) => {
+          const body = physicsBodiesRef.current[id];
+          const mesh = sceneModelsRef.current[id];
+          if (body && mesh) {
+            mesh.position.copy(body.position as unknown as THREE.Vector3);
+            mesh.quaternion.copy(body.quaternion as unknown as THREE.Quaternion);
+          }
+        });
+      }
 
       // Execute user script if playing
       if (userScriptRef.current) {
@@ -331,6 +370,11 @@ export default function Viewport3D() {
       if (!existsInState) {
         sceneRef.current?.remove(sceneModelsRef.current[id]);
         delete sceneModelsRef.current[id];
+        
+        if (physicsBodiesRef.current[id] && worldRef.current) {
+          worldRef.current.removeBody(physicsBodiesRef.current[id]);
+          delete physicsBodiesRef.current[id];
+        }
       }
     });
 
@@ -339,9 +383,20 @@ export default function Viewport3D() {
       // If we already loaded it, just update position/rotation
       if (sceneModelsRef.current[obj.id]) {
         const model = sceneModelsRef.current[obj.id];
-        model.position.set(obj.position[0], obj.position[1], obj.position[2]);
-        model.rotation.set(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
-        model.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+        if (!isPlaying) {
+          model.position.set(obj.position[0], obj.position[1], obj.position[2]);
+          model.rotation.set(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+          model.scale.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+          
+          // Update physics body transform if not playing
+          if (physicsBodiesRef.current[obj.id]) {
+            const body = physicsBodiesRef.current[obj.id];
+            body.position.set(obj.position[0], obj.position[1], obj.position[2]);
+            const euler = new THREE.Euler(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+            const quat = new THREE.Quaternion().setFromEuler(euler);
+            body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+          }
+        }
         return;
       }
 
@@ -367,6 +422,33 @@ export default function Viewport3D() {
 
           sceneModelsRef.current[obj.id] = model;
           sceneRef.current?.add(model);
+
+          // Add Physics Body
+          if (worldRef.current) {
+            // For demo, we approximate bounds with a Box
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const halfExtents = new CANNON.Vec3(size.x/2, size.y/2, size.z/2);
+            
+            const shape = new CANNON.Box(halfExtents);
+            
+            // If the object name includes 'static' or 'floor' or it's a structural piece, mass=0. Else mass=1.
+            const isStatic = obj.name.toLowerCase().includes('floor') || obj.name.toLowerCase().includes('wall') || obj.name.toLowerCase().includes('static');
+            
+            const body = new CANNON.Body({
+              mass: isStatic ? 0 : 1,
+              position: new CANNON.Vec3(obj.position[0], obj.position[1], obj.position[2]),
+            });
+            
+            const euler = new THREE.Euler(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+            const quat = new THREE.Quaternion().setFromEuler(euler);
+            body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+            
+            body.addShape(shape);
+            worldRef.current.addBody(body);
+            physicsBodiesRef.current[obj.id] = body;
+          }
+
           setIsLoadingModel(false);
         },
         undefined,
@@ -411,6 +493,26 @@ export default function Viewport3D() {
       setIsPlaying(false);
       userScriptRef.current = null;
       handleReset(); // Reset model position
+      
+      // Reset physics bodies to scene objects state
+      sceneObjects.forEach(obj => {
+        if (physicsBodiesRef.current[obj.id]) {
+          const body = physicsBodiesRef.current[obj.id];
+          body.position.set(obj.position[0], obj.position[1], obj.position[2]);
+          body.velocity.set(0,0,0);
+          body.angularVelocity.set(0,0,0);
+          
+          const euler = new THREE.Euler(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+          const quat = new THREE.Quaternion().setFromEuler(euler);
+          body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+        }
+        
+        if (sceneModelsRef.current[obj.id]) {
+          const model = sceneModelsRef.current[obj.id];
+          model.position.set(obj.position[0], obj.position[1], obj.position[2]);
+          model.rotation.set(obj.rotation[0], obj.rotation[1], obj.rotation[2]);
+        }
+      });
     } else {
       // Play
       if (activeCode) {
@@ -418,21 +520,23 @@ export default function Viewport3D() {
           // In a production app, use an iframe sandbox or web worker.
           // For this demo IDE, we use new Function with injected scope.
           
-          // We inject 'engine' which contains { scene, camera, THREE, getModel, getDeltaTime }
+          // We inject 'engine' which contains { scene, camera, THREE, CANNON, world, getModel, getSceneObjects, getPhysicsBodies, getDeltaTime }
           const wrappedCode = `
             return function(engine) {
               const model = engine.getModel();
-              if (!model) return;
-              
               const THREE = engine.THREE;
+              const CANNON = engine.CANNON;
               const dt = engine.getDeltaTime();
+              const world = engine.world;
+              const sceneObjects = engine.getSceneObjects();
+              const physicsBodies = engine.getPhysicsBodies();
               
               // Run user code inside this scope
               ${activeCode}
               
               // Call an update function if user defined one
               if (typeof update === 'function') {
-                update(dt, model, THREE);
+                update(dt, model, THREE, CANNON, world, sceneObjects, physicsBodies);
               }
             }
           `;
