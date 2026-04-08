@@ -559,3 +559,27 @@ Dando início ao Master Plan, o foco destas três iterações consecutivas foi t
 - O loop de física está responsivo. Os assets são renderizados individualmente com o `GLTFLoader`.
 - O payload de contexto da IA absorveu perfeitamente a nova instrução de sistema (System Prompt).
 - Todas as alterações foram salvas e documentadas, pavimentando o caminho para o "Phase 2" do Master Plan (Bridge para Unreal Engine).
+## Iteração 27: A Ponte Unreal Engine (UMAP Exporter)
+
+A Fase 2 do nosso *Master Plan* focou em construir uma ponte robusta entre o mundo Web (Frontend React + Three.js) e o C++ da Unreal Engine 5. O primeiro passo dessa ponte é garantir que o Editor saiba "cuspir" o cenário que o usuário montou.
+
+### 1. Implementação
+- **Refatoração do Endpoint de Sincronização (`aiController.ts`):** 
+  O método `syncProjectToUnreal` não envia mais o estado sujo do React para o Python. Ele agora itera pelo `scene_graph`, separa os IDs dos Assets (`Megascans_Rock`, `MetaHuman_Soldier`), extrai as propriedades espaciais e empacota em um JSON que funciona como um "proxy UMAP" (formato legível de mapas da Unreal).
+- **Conversão de Sistemas de Coordenadas (Web -> Unreal):**
+  - **Web (Three.js):** *Right-Handed, Y-up* (Y é cima, Z é profundidade).
+  - **Unreal Engine 5:** *Left-Handed, Z-up* (Z é cima, Y é direita, tudo multiplicado por 100 pois Unreal usa centímetros).
+  Essa formatação foi isolada no JSON para que o Python só aplique a matemática final, mantendo o log de sincronização limpo.
+- **Armazenamento Local no Python (`ai_bridge.py`):**
+  O script `ai_bridge.py` agora não apenas finge executar: ele intercepta o payload, escreve o arquivo JSON (`export_NomeDoProjeto.json`) no disco da máquina que está rodando a Unreal. É este arquivo físico que o verdadeiro plugin em C++ da Unreal lê para popular o nível sem travar a thread principal da engine.
+
+### 2. Validação e Testes
+O fluxo ponta a ponta:
+1. Adicionar 5 modelos na Web.
+2. Clicar em "Sync UE5".
+3. O Node.js empacota o JSON.
+4. O `child_process` invoca o `ai_bridge.py`.
+5. O arquivo físico `export_MeuProjeto.json` surge no servidor de build.
+6. A interface retorna um `[Success]` para o usuário informando que o nível foi sincronizado.
+
+A base física para sincronizar as cenas está montada. A próxima etapa (Iteração 28) é garantir que não apenas as malhas 3D (Meshes) passem por essa ponte, mas também o código lógico JavaScript convertido em Blueprints.

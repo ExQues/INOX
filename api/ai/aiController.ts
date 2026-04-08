@@ -338,14 +338,45 @@ export const syncProjectToUnreal = async (req: CustomRequest, res: Response) => 
 
     const sceneGraph = project.scene_graph || [];
 
+    // Formata o grafo da cena no formato UMAP/JSON esperado pela Unreal Engine
+    const unrealSceneObjects = sceneGraph.map((obj: any) => {
+      // O Three.js usa Right-Handed Y-up
+      // A Unreal Engine usa Left-Handed Z-up
+      // Essa conversão também é feita no ai_bridge.py, mas enviar dados limpos facilita o log
+      return {
+        id: obj.id,
+        name: obj.name || "UnknownMesh",
+        asset_id: obj.assetId || "Generic_Mesh",
+        url: obj.url || "",
+        position: {
+          x: obj.position[0],
+          y: obj.position[1],
+          z: obj.position[2]
+        },
+        rotation: {
+          x: obj.rotation[0],
+          y: obj.rotation[1],
+          z: obj.rotation[2]
+        },
+        scale: {
+          x: obj.scale[0],
+          y: obj.scale[1],
+          z: obj.scale[2]
+        }
+      };
+    });
+
     const config = {
       name: project.name || `SyncMap_${Date.now()}`,
       action: 'sync_scene',
-      scene_objects: sceneGraph,
-      create_new_map: false
+      scene_objects: unrealSceneObjects,
+      create_new_map: false,
+      export_version: '1.0.0',
+      timestamp: new Date().toISOString()
     };
 
     console.log(`[UnrealMapController] Sincronizando projeto ${projectId} com Unreal Engine...`);
+    console.log(`[UnrealMapController] Exportando ${unrealSceneObjects.length} objetos para formato UMAP/JSON.`);
 
     const result = await invokeUnrealBridge(config);
 

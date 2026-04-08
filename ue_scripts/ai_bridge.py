@@ -123,6 +123,16 @@ def sync_scene_from_web(config):
     editor_level_lib = unreal.EditorLevelLibrary
     scene_objects = config.get("scene_objects", [])
     
+    # Save the raw JSON locally as a proxy for the UMAP export process
+    try:
+        import os
+        export_path = os.path.join(os.getcwd(), "ue_scripts", f"export_{config.get('name', 'map')}.json")
+        with open(export_path, 'w') as f:
+            json.dump(config, f, indent=4)
+        print(f"[AI-BRIDGE] 💾 UMAP Proxy JSON exportado para: {export_path}")
+    except Exception as e:
+        print(f"[AI-BRIDGE] ⚠️ Aviso: Não foi possível exportar JSON de backup: {e}")
+
     if not scene_objects:
         print("[AI-BRIDGE] Nenhum objeto na cena para sincronizar.")
         return
