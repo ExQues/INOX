@@ -404,3 +404,21 @@ O Loop contínuo pode seguir agora para refinamento do Sandbox, autenticação r
 ### 3. Análise de Resultados e Próximos Passos
 O Controle de Versão Local traz uma camada essencial de segurança e confiança para o desenvolvedor. Especialmente em um fluxo de trabalho orientado por IA, onde o LLM pode sobrescrever um script que estava funcionando, ter a capacidade de "voltar no tempo" com um clique é crucial.
 Os próximos passos do ciclo contínuo focarão em persistir esse histórico de commits no backend (Supabase) para que as versões sobrevivam ao recarregamento da página, consolidando o INOX como uma ferramenta robusta e persistente.
+
+## Iteração 19: Persistência de Histórico de Versões na Nuvem
+
+**Objetivo:** Integrar o histórico de commits gerado localmente (no Zustand) com o banco de dados remoto (Supabase). Dessa forma, quando o usuário fechar a aba ou recarregar o navegador, todo o seu histórico de snapshots de projeto (Cena 3D, Código e Blueprint) será restaurado intacto.
+
+### 1. Implementação
+- **Atualização do Schema e Tipagem:** O arquivo de tipagem do Supabase (`supabaseService.ts`) e o arquivo de store (`useStore.ts`) foram atualizados para incluir a coluna `commits` (JSONB) na interface `projects`.
+- **Evolução da API de Salvamento (`aiController.ts` e `inoxAiSdk.ts`):** O endpoint `saveProjectScene` passou a receber, além de `activeCode` e `sceneObjects`, o array completo de `commits`. Esse array é enviado em um único payload transacional para atualizar o registro do projeto no Supabase.
+- **Restauração Automática no Mount (`Editor.tsx`):** O gancho (hook) `useEffect` que executa a hidratação da cena ao abrir um projeto foi incrementado. Ele agora verifica se `currentProject.commits` existe e possui itens. Se sim, ele recarrega a linha do tempo do Histórico instantaneamente. Se não, inicia com um array vazio.
+- **Script de Migração SQL:** Foi gerado o arquivo `/supabase/migrations/002_add_commits_to_projects.sql` para garantir que o banco de dados físico acompanhe o schema (adicionando a coluna `commits` na tabela `projects`).
+
+### 2. Testes e Validação
+- Compilação via TypeScript (TSC) e Vite confirmou que todas as assinaturas estão corretas e o backend express consome o payload esperado.
+- A lógica de hidratação (Array ou Nulo) garante fallback seguro para projetos antigos que não possuíam histórico de commits.
+- O payload de salvamento transita silenciosamente e não trava a simulação (UX fluida).
+
+### 3. Análise de Resultados e Próximos Passos
+O Editor Web do INOX Game Creator atingiu um estado de persistência "grau de estúdio" (Studio-Grade). O usuário não só edita e gera lógicas complexas com a IA, mas também constrói uma esteira do tempo que sobrevive a fechamentos de navegador. O ciclo contínuo segue cada vez mais refinado. O próximo passo do loop poderia englobar a exportação/build do projeto ou refinamento da sincronização dos assets proxy 3D na Unreal Engine.

@@ -64,7 +64,8 @@ export default function Editor() {
       const response = await aiSdk.saveProjectScene({
         projectId: currentProject.id,
         sceneObjects: useStore.getState().sceneObjects,
-        activeCode: useStore.getState().activeCode
+        activeCode: useStore.getState().activeCode,
+        commits: useStore.getState().commits
       });
       
       if (response.success) {
@@ -120,6 +121,12 @@ export default function Editor() {
       
       if (currentProject.code_structure && typeof currentProject.code_structure === 'string') {
         setActiveCode(currentProject.code_structure);
+      }
+
+      if (currentProject.commits && Array.isArray(currentProject.commits)) {
+        useStore.setState({ commits: currentProject.commits });
+      } else {
+        useStore.setState({ commits: [] }); // Reset if no commits
       }
     }
   }, [currentProject?.id]);

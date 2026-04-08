@@ -353,7 +353,7 @@ export const syncProjectToUnreal = async (req: CustomRequest, res: Response) => 
 
 export const saveProjectScene = async (req: CustomRequest, res: Response) => {
   try {
-    const { projectId, sceneObjects, activeCode } = req.body;
+    const { projectId, sceneObjects, activeCode, commits } = req.body;
 
     if (!projectId) {
       return res.status(400).json({ error: 'Project ID is required' });
@@ -362,7 +362,8 @@ export const saveProjectScene = async (req: CustomRequest, res: Response) => {
     const updatedProject = await updateProject(projectId, {
       id: projectId,
       scene_graph: sceneObjects,
-      code_structure: activeCode
+      code_structure: activeCode,
+      commits: commits
     });
 
     res.json({

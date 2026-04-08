@@ -113,6 +113,7 @@ export interface SaveSceneRequest {
   projectId: string;
   sceneObjects: any[];
   activeCode: string | null;
+  commits?: any[];
 }
 
 export interface SaveSceneResponse {

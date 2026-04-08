@@ -48,6 +48,7 @@ export type Database = {
           status: 'draft' | 'active' | 'archived';
           code_structure: any; // Used to store activeCode
           scene_graph: any; // Used to store sceneObjects array
+          commits: any; // Used to store version history
           created_at: string;
           updated_at: string;
         };
@@ -61,6 +62,7 @@ export type Database = {
           status?: 'draft' | 'active' | 'archived';
           code_structure?: any;
           scene_graph?: any;
+          commits?: any;
         };
         Update: {
           id: string;
@@ -72,6 +74,7 @@ export type Database = {
           status?: 'draft' | 'active' | 'archived';
           code_structure?: any;
           scene_graph?: any;
+          commits?: any;
         };
       };
       assets: {

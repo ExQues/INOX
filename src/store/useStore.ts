@@ -9,6 +9,7 @@ interface Project {
   status: 'draft' | 'active' | 'archived';
   code_structure: Record<string, any>;
   scene_graph?: any;
+  commits?: any;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +108,7 @@ interface Store {
   setActiveBlueprint: (blueprint: any | null) => void;
   addLog: (log: Omit<LogMessage, 'id' | 'timestamp'>) => void;
   clearLogs: () => void;
+  setCommits: (commits: Commit[]) => void;
   addCommit: (message: string) => void;
   checkoutCommit: (commitId: string) => void;
   setIsPlaying: (playing: boolean) => void;
@@ -179,6 +181,8 @@ export const useStore = create<Store>((set) => ({
   })),
 
   clearScene: () => set({ sceneObjects: [], activeModelUrl: null }),
+
+  setCommits: (commits) => set({ commits }),
 
   setActiveCode: (code) => set({ activeCode: code }),
 
