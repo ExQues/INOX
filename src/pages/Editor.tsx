@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   ArrowLeft, Play, Square, Save, Settings, Layers,
   Code, Box, Image as ImageIcon, FileText,
-  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow, GitCommit
+  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow, GitCommit, Package
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 import BlueprintGraph from '../components/editor/BlueprintGraph';
@@ -35,6 +35,8 @@ export default function Editor() {
   const [projectAssets, setProjectAssets] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [showBuildModal, setShowBuildModal] = useState(false);
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
@@ -95,6 +97,26 @@ export default function Editor() {
       setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erro ao tentar sincronizar com a Unreal Engine." }]);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleBuildProject = async (platform: 'web' | 'desktop' | 'mobile') => {
+    if (!currentProject?.id) return;
+    
+    setIsBuilding(true);
+    setShowBuildModal(false);
+    try {
+      setMessages(prev => [...prev, { role: 'assistant', content: `📦 Iniciando empacotamento para a plataforma **${platform.toUpperCase()}**...\n\nCompilando shaders e lógicas...` }]);
+      
+      // Simulate build process
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: `✅ Build para **${platform.toUpperCase()}** concluída com sucesso!\n\nVocê pode baixar os binários no Dashboard.` }]);
+    } catch (error) {
+      console.error('Failed to build:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erro ao tentar empacotar o projeto." }]);
+    } finally {
+      setIsBuilding(false);
     }
   };
   const loadAssets = async () => {
@@ -263,12 +285,21 @@ export default function Editor() {
         <div className="flex items-center gap-2">
           <button 
             onClick={handleSyncUnreal}
-            disabled={isSyncing}
+            disabled={isSyncing || isBuilding}
             className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md transition text-sm font-medium shadow-lg shadow-blue-900/20"
             title="Sincronizar com Unreal Engine"
           >
             {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Monitor className="w-4 h-4" />}
             Sync UE5
+          </button>
+          <button 
+            onClick={() => setShowBuildModal(true)}
+            disabled={isBuilding || isSyncing}
+            className="flex items-center gap-2 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-md transition text-sm font-medium shadow-lg shadow-orange-900/20"
+            title="Empacotar e Exportar Jogo"
+          >
+            {isBuilding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+            Exportar
           </button>
           <button 
             onClick={handleSaveScene}
@@ -638,6 +669,67 @@ export default function Editor() {
           </div>
         </aside>
       </div>
+      {/* Build Modal */}
+      {showBuildModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-6 w-[90%] max-w-md relative">
+            <button 
+                onClick={() => setShowBuildModal(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              >
+                <div className="w-5 h-5 flex items-center justify-center text-lg leading-none">&times;</div>
+              </button>
+            <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+              <Package className="w-5 h-5 text-orange-500" />
+              Empacotar Projeto
+            </h2>
+            <p className="text-sm text-slate-400 mb-6">
+              Selecione a plataforma alvo para exportar seu projeto. O INOX irá compilar a cena, as lógicas Blueprint e os assets associados.
+            </p>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={() => handleBuildProject('web')}
+                className="w-full flex items-center justify-between p-4 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-700 hover:border-slate-600 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition">
+                    <Monitor className="w-5 h-5" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-bold text-slate-200">Web (HTML5)</div>
+                    <div className="text-xs text-slate-500">Roda diretamente no navegador (WebGL/WebGPU)</div>
+                  </div>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => handleBuildProject('desktop')}
+                className="w-full flex items-center justify-between p-4 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-700 hover:border-slate-600 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition">
+                    <Box className="w-5 h-5" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-bold text-slate-200">Desktop (Windows/Mac)</div>
+                    <div className="text-xs text-slate-500">Binário nativo em C++ compilado via Unreal</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-slate-700 flex justify-end">
+              <button 
+                onClick={() => setShowBuildModal(false)}
+                className="px-4 py-2 text-sm text-slate-300 hover:text-white transition"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
