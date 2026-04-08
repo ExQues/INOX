@@ -487,3 +487,29 @@ O próximo passo da iteração (Iteração 22) seria focar na autoria colaborati
 ### 3. Análise de Resultados e Próximos Passos
 O "Assistente Rockstar" deixou de ser reativo e cego para se tornar hiper-contextualizado. A experiência agora se assemelha a ferramentas de ponta como Cursor ou Copilot, com a vantagem de ler um "Console de Game Engine" em tempo real. 
 O ciclo de aprimoramento contínuo nos leva, agora, à maturidade da plataforma. O passo ideal da próxima iteração (Iteração 23) seria tratar a Autenticação de Usuário (Auth) e permissões de sessão para que o Dashboard possa de fato proteger os projetos de usuários distintos.
+## Iteração 23: Visualização de Modelos Realistas e Animações (GLTF/GLB)
+
+**Objetivo:** Permitir que o usuário visualize modelos 3D realistas com esqueletos e animações, saindo do clássico cubo roxo e das formas básicas. O Editor Web deve conseguir interpretar as respostas da IA (que retornam links de modelos da Khronos ou Quixel/MetaHumans em formato GLTF) e renderizá-los corretamente na Viewport com animações básicas ativas, além de suportar cenários mais amplos.
+
+### 1. Implementação
+- **Integração de Animações (Three.js `AnimationMixer`):**
+  - O componente `Viewport3D.tsx` foi atualizado para suportar o `THREE.AnimationMixer`.
+  - Criado o `mixersRef` e o `clockRef` para gerenciar a linha do tempo (delta time) das animações no loop de renderização (função `animate()`).
+  - Quando um modelo GLTF é carregado (seja um único modelo na *preview* ou múltiplos modelos na cena), o loader verifica se existem `gltf.animations`. Se sim, a primeira animação encontrada (`animations[0]`) é automaticamente executada.
+- **Auto-Scale Dinâmico para Mapas e Personagens:**
+  - O algoritmo que centraliza e redimensiona os modelos foi melhorado.
+  - Adicionada uma verificação simples: se a URL do modelo for referente a um "Environment/Mapa", ele é escalonado com um `targetSize` maior (10 unidades em vez de 2).
+  - Foi garantido que os modelos assentem perfeitamente no chão (`y=0`) calculando as bounding boxes reais da geometria após o redimensionamento.
+  - A Câmera também ajusta dinamicamente sua posição e ponto de fuga baseado na altura do modelo carregado.
+- **Ajuste de Contexto de Script:** O `engineContext` injetado nos scripts JS escritos pelo usuário agora expõe o método `getMixers()`, permitindo que os scripts interajam com o objeto de animação.
+- **Refinamento do Mock AAA (`aiService.ts`):** Atualizamos o orquestrador para devolver links oficiais do repositório *Khronos glTF-Sample-Models*:
+  - Se o usuário pedir "personagem/andando", devolvemos o `CesiumMan.gltf` (um humano com animação de caminhada).
+  - Se pedir "carro/veículo", devolvemos o `DamagedHelmet.gltf`.
+  - Se pedir "mapa/terreno", devolvemos um mapa de testes para preencher a tela.
+
+### 2. Testes e Validação
+- **Comportamento Animado:** Ao entrar no chat e pedir *"Gere um personagem humano andando"*, a IA retorna o *CesiumMan*. O `GLTFLoader` baixa o modelo e o `AnimationMixer` inicia automaticamente a animação de caminhada. Tudo roda liso a 60fps na Web.
+- **Gerenciamento de Memória:** Implementada limpeza estrita. Ao trocar de modelo ativo ou deletar modelos da cena, os Mixers antigos chamam `.stopAllAction()` e `uncacheRoot()`, prevenindo *memory leaks*.
+
+### 3. Análise de Resultados e Próximos Passos
+O usuário agora consegue finalmente enxergar a promessa de "jogos de verdade" ganhando vida. A capacidade de ver personagens humanos com esqueleto e animações, assim como pequenos terrenos, eleva a confiança no INOX Game Creator. O ciclo contínuo agora pode mirar na exportação real ou em integrar esses esqueletos com o sistema de física do `cannon-es` (ex: controlar o humano com o teclado via script).

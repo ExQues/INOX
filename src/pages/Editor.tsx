@@ -167,7 +167,7 @@ export default function Editor() {
       let aiResponse = "Entendi! Vou começar a trabalhar nisso para o seu projeto.";
       
       // Keyword detection for demo
-      if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem') || userMessage.toLowerCase().includes('rocha') || userMessage.toLowerCase().includes('floresta')) {
+      if (userMessage.toLowerCase().includes('dragão') || userMessage.toLowerCase().includes('3d') || userMessage.toLowerCase().includes('personagem') || userMessage.toLowerCase().includes('rocha') || userMessage.toLowerCase().includes('floresta') || userMessage.toLowerCase().includes('mapa') || userMessage.toLowerCase().includes('terreno') || userMessage.toLowerCase().includes('andando')) {
         aiResponse = "Analisando a biblioteca de Assets AAA (Quixel Megascans/MetaHumans)... 🚀\n\nVou buscar os modelos perfeitos e adicionar as versões 'Proxy' (low-poly) no seu Blockout web.";
         setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
 

@@ -413,19 +413,34 @@ export async function request3DModelGeneration(options: Generate3DOptions): Prom
 }
 
 // Simulating polling the task status and returning a high-quality pre-existing asset proxy
-export async function check3DModelStatus(taskId: string): Promise<Generated3DModel> {
+export async function check3DModelStatus(taskId: string, prompt?: string): Promise<Generated3DModel> {
   console.log(`[AI Orchestrator] Retrieving AAA Asset Proxy for task: ${taskId}`);
   
   // Simulate network delay for DB search
   await new Promise(resolve => setTimeout(resolve, 1000));
   
+  // Use a mix of Khronos sample models based on the prompt
+  let proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf';
+  let assetId = 'Megascans_Prop_v1';
+
+  const p = prompt ? prompt.toLowerCase() : '';
+  if (p.includes('personagem') || p.includes('humano') || p.includes('soldado') || p.includes('herói') || p.includes('andando')) {
+    proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf';
+    assetId = 'MetaHuman_Soldier_v1';
+  } else if (p.includes('carro') || p.includes('veículo')) {
+    proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf'; // Fallback
+    assetId = 'Megascans_Vehicle_v1';
+  } else if (p.includes('mapa') || p.includes('terreno') || p.includes('plano')) {
+    proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf'; // Fallback for map
+    assetId = 'Megascans_Terrain_v1';
+  }
+
   return {
     taskId,
     status: 'completed',
     isAAAAsset: true,
-    assetId: "Megascans_Rock_v1", // Identifier for Unreal Engine to download the real 8K asset
-    // We use a Khronos sample model (FlightHelmet) as the "Proxy/Blockout" model for the Web Editor
-    modelUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf',
+    assetId: assetId, // Identifier for Unreal Engine to download the real 8K asset
+    modelUrl: proxyUrl,
   };
 }
 

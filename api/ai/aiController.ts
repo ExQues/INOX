@@ -440,7 +440,7 @@ export const get3DModelStatus = async (req: CustomRequest, res: Response) => {
       return res.status(400).json({ error: 'Task ID is required' });
     }
 
-    const status = await check3DModelStatus(taskId);
+    const status = await check3DModelStatus(taskId, prompt as string);
 
     // Se o modelo foi concluído com sucesso e temos o contexto do projeto, salvamos no banco
     if (status.status === 'completed' && status.modelUrl && projectId && prompt) {

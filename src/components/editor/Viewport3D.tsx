@@ -26,7 +26,8 @@ export default function Viewport3D() {
   
   // Execution Context Refs
   const userScriptRef = useRef<Function | null>(null);
-  const engineContextRef = useRef<any>(null);
+  const mixersRef = useRef<{ [id: string]: THREE.AnimationMixer }>({});
+  const clockRef = useRef(new THREE.Clock());
 
   const { activeModelUrl, sceneObjects, activeCode, updateSceneObject, isPlaying, setIsPlaying, addLog, clearLogs } = useStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -189,7 +190,7 @@ export default function Viewport3D() {
     renderer.domElement.addEventListener('pointerdown', onMouseClick);
 
     // Create Engine Context for user scripts
-    engineContextRef.current = {
+    const engineContext = {
       scene,
       camera,
       THREE,
@@ -198,6 +199,7 @@ export default function Viewport3D() {
       getModel: () => modelRef.current,
       getSceneObjects: () => sceneModelsRef.current,
       getPhysicsBodies: () => physicsBodiesRef.current,
+      getMixers: () => mixersRef.current,
       getDeltaTime: () => 1 / 60, // Fixed timestep for now
       log: (type: 'log' | 'warn' | 'error', message: string) => {
         addLog({ type, message });
@@ -210,6 +212,12 @@ export default function Viewport3D() {
       animationFrameId.current = requestAnimationFrame(animate);
 
       controls.update();
+      const dt = clockRef.current.getDelta();
+
+      // Update animations
+      Object.values(mixersRef.current).forEach((mixer) => {
+        mixer.update(dt);
+      });
 
       // Step Physics and sync if playing
       if (isPlaying) {
@@ -229,7 +237,7 @@ export default function Viewport3D() {
       // Execute user script if playing
       if (userScriptRef.current) {
         try {
-          userScriptRef.current(engineContextRef.current);
+          userScriptRef.current(engineContext);
         } catch (e) {
           console.error('Error executing user script:', e);
           userScriptRef.current = null; // Stop execution on error
@@ -298,6 +306,11 @@ export default function Viewport3D() {
     if (modelRef.current) {
       sceneRef.current.remove(modelRef.current);
       modelRef.current = null;
+      if (mixersRef.current['preview_model']) {
+        mixersRef.current['preview_model'].stopAllAction();
+        mixersRef.current['preview_model'].uncacheRoot(mixersRef.current['preview_model'].getRoot());
+        delete mixersRef.current['preview_model'];
+      }
     }
 
     if (activeModelUrl) {
@@ -315,13 +328,19 @@ export default function Viewport3D() {
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
           
-          // Normalize scale to fit in view
-          const scale = 2 / maxDim;
+          // Normalize scale to fit in view (larger for maps)
+          const isMap = activeModelUrl.toLowerCase().includes('environment');
+          const targetSize = isMap ? 10 : 2;
+          const scale = targetSize / maxDim;
           model.scale.setScalar(scale);
           
-          // Center position
+          // Center position (for maps, we usually want them centered at origin, characters too)
           model.position.sub(center.multiplyScalar(scale));
           
+          // Ensure map/floor is resting exactly on y=0
+          const updatedBox = new THREE.Box3().setFromObject(model);
+          model.position.y -= updatedBox.min.y;
+
           // Add shadows
           model.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
@@ -330,14 +349,22 @@ export default function Viewport3D() {
             }
           });
 
+          // Setup animations for single model preview
+          if (gltf.animations && gltf.animations.length > 0) {
+            const mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]); // Play first animation by default
+            action.play();
+            mixersRef.current['preview_model'] = mixer;
+          }
+
           sceneRef.current?.add(model);
           modelRef.current = model;
           setIsLoadingModel(false);
           
-          // Reset camera
+          // Reset camera based on object size
           if (controlsRef.current && cameraRef.current) {
-            controlsRef.current.target.set(0, 0, 0);
-            cameraRef.current.position.set(0, 2, 5);
+            controlsRef.current.target.set(0, updatedBox.max.y / 2, 0);
+            cameraRef.current.position.set(0, targetSize * 0.8, targetSize * 1.5);
             controlsRef.current.update();
           }
         },
@@ -377,6 +404,12 @@ export default function Viewport3D() {
         if (physicsBodiesRef.current[id] && worldRef.current) {
           worldRef.current.removeBody(physicsBodiesRef.current[id]);
           delete physicsBodiesRef.current[id];
+        }
+        
+        if (mixersRef.current[id]) {
+          mixersRef.current[id].stopAllAction();
+          mixersRef.current[id].uncacheRoot(mixersRef.current[id].getRoot());
+          delete mixersRef.current[id];
         }
       }
     });
@@ -422,6 +455,14 @@ export default function Viewport3D() {
               child.receiveShadow = true;
             }
           });
+
+          // Setup animations
+          if (gltf.animations && gltf.animations.length > 0) {
+            const mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]); // Play first animation by default
+            action.play();
+            mixersRef.current[obj.id] = mixer;
+          }
 
           sceneModelsRef.current[obj.id] = model;
           sceneRef.current?.add(model);
@@ -524,7 +565,7 @@ export default function Viewport3D() {
           // In a production app, use an iframe sandbox or web worker.
           // For this demo IDE, we use new Function with injected scope.
 
-          // We inject 'engine' which contains { scene, camera, THREE, CANNON, world, getModel, getSceneObjects, getPhysicsBodies, getDeltaTime }
+          // We inject 'engine' which contains { scene, camera, THREE, CANNON, world, getModel, getSceneObjects, getPhysicsBodies, getMixers, getDeltaTime }
           const wrappedCode = `
             return function(engine) {
               const model = engine.getModel();
@@ -534,6 +575,7 @@ export default function Viewport3D() {
               const world = engine.world;
               const sceneObjects = engine.getSceneObjects();
               const physicsBodies = engine.getPhysicsBodies();
+              const mixers = engine.getMixers();
               
               // Custom Console
               const console = {
