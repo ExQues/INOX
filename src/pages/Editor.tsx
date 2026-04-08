@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   ArrowLeft, Play, Square, Save, Settings, Layers,
   Code, Box, Image as ImageIcon, FileText,
-  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow
+  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow, GitCommit
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 import BlueprintGraph from '../components/editor/BlueprintGraph';
@@ -24,8 +24,8 @@ const aiSdk = createInoxAiSdk({
 
 export default function Editor() {
   const navigate = useNavigate();
-  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject, isPlaying, setIsPlaying, consoleLogs, clearLogs, activeBlueprint, setActiveBlueprint } = useStore();
-  const [activeTab, setActiveTab] = useState<'preview' | 'code' | 'blueprint'>('preview');
+  const { currentProject, user, setActiveModelUrl, activeCode, setActiveCode, addSceneObject, isPlaying, setIsPlaying, consoleLogs, clearLogs, activeBlueprint, setActiveBlueprint, commits, addCommit, checkoutCommit } = useStore();
+  const [activeTab, setActiveTab] = useState<'preview' | 'code' | 'blueprint' | 'history'>('preview');
   const [isConsoleOpen, setIsConsoleOpen] = useState(true);
   const consoleEndRef = useRef<HTMLDivElement>(null);
   
@@ -377,6 +377,15 @@ export default function Editor() {
               <Workflow className="w-4 h-4" />
               Blueprint
             </button>
+            <button 
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                activeTab === 'history' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <GitCommit className="w-4 h-4" />
+              Histórico
+            </button>
           </div>
 
           {/* Workspace Area */}
@@ -388,6 +397,69 @@ export default function Editor() {
             ) : activeTab === 'blueprint' ? (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl relative">
                 <BlueprintGraph blueprint={activeBlueprint} />
+              </div>
+            ) : activeTab === 'history' ? (
+              <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <GitCommit className="w-6 h-6 text-purple-400" />
+                    Histórico de Versões
+                  </h2>
+                  <button 
+                    onClick={() => {
+                      const msg = prompt('Digite a mensagem da versão:');
+                      if (msg) {
+                        addCommit(msg);
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm font-medium shadow-lg shadow-purple-900/20"
+                  >
+                    Salvar Snapshot
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+                  {commits.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500 space-y-4">
+                      <GitCommit className="w-12 h-12 opacity-20" />
+                      <p>Nenhuma versão salva ainda. Salve o estado atual para criar um histórico.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
+                      {commits.map((commit) => (
+                        <div key={commit.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-700 bg-slate-800 text-slate-400 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                            <GitCommit className="w-5 h-5" />
+                          </div>
+                          <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-800/80 hover:bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-md transition">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
+                              <h3 className="font-bold text-slate-200 text-sm">{commit.message}</h3>
+                              <span className="text-xs text-slate-500 font-mono bg-slate-900/50 px-2 py-1 rounded">
+                                {new Date(commit.timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex gap-4 text-xs text-slate-400 mb-4">
+                              <span className="flex items-center gap-1"><Box className="w-3 h-3" /> {commit.snapshot.sceneObjects.length} objetos</span>
+                              <span className="flex items-center gap-1"><Code className="w-3 h-3" /> {commit.snapshot.code ? 'Com Lógica' : 'Sem Lógica'}</span>
+                              {commit.snapshot.blueprint && <span className="flex items-center gap-1"><Workflow className="w-3 h-3" /> Com Blueprint</span>}
+                            </div>
+                            <button 
+                              onClick={() => {
+                                if(confirm('Restaurar esta versão irá substituir o estado atual não salvo. Deseja continuar?')) {
+                                  checkoutCommit(commit.id);
+                                  setActiveTab('preview');
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-medium transition w-full sm:w-auto"
+                            >
+                              Restaurar Versão
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl">

@@ -48,6 +48,17 @@ export interface LogMessage {
   timestamp: number;
 }
 
+export interface Commit {
+  id: string;
+  message: string;
+  timestamp: number;
+  snapshot: {
+    code: string | null;
+    sceneObjects: SceneObject[];
+    blueprint: any | null;
+  };
+}
+
 export interface SceneObject {
   id: string;
   assetId: string;
@@ -75,6 +86,7 @@ interface Store {
   activeCode: string | null; // Code currently loaded in the editor
   activeBlueprint: any | null; // JSON schema of the generated Blueprint
   consoleLogs: LogMessage[]; // Console logs from the editor sandbox
+  commits: Commit[]; // Version control history
   isPlaying: boolean; // Global simulation state
   isLoading: boolean;
   error: string | null;
@@ -95,6 +107,8 @@ interface Store {
   setActiveBlueprint: (blueprint: any | null) => void;
   addLog: (log: Omit<LogMessage, 'id' | 'timestamp'>) => void;
   clearLogs: () => void;
+  addCommit: (message: string) => void;
+  checkoutCommit: (commitId: string) => void;
   setIsPlaying: (playing: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -112,6 +126,7 @@ export const useStore = create<Store>((set) => ({
   activeCode: null,
   activeBlueprint: null,
   consoleLogs: [],
+  commits: [],
   isPlaying: false,
   isLoading: false,
   error: null,
@@ -174,6 +189,32 @@ export const useStore = create<Store>((set) => ({
   })),
 
   clearLogs: () => set({ consoleLogs: [] }),
+
+  addCommit: (message) => set((state) => {
+    const newCommit: Commit = {
+      id: Math.random().toString(36).substr(2, 9),
+      message,
+      timestamp: Date.now(),
+      snapshot: {
+        code: state.activeCode,
+        sceneObjects: JSON.parse(JSON.stringify(state.sceneObjects)), // deep copy
+        blueprint: state.activeBlueprint ? JSON.parse(JSON.stringify(state.activeBlueprint)) : null
+      }
+    };
+    return { commits: [newCommit, ...state.commits] };
+  }),
+
+  checkoutCommit: (commitId) => set((state) => {
+    const commit = state.commits.find(c => c.id === commitId);
+    if (!commit) return state;
+    
+    return {
+      activeCode: commit.snapshot.code,
+      sceneObjects: JSON.parse(JSON.stringify(commit.snapshot.sceneObjects)),
+      activeBlueprint: commit.snapshot.blueprint ? JSON.parse(JSON.stringify(commit.snapshot.blueprint)) : null,
+      activeModelUrl: null // clear active model when checking out
+    };
+  }),
 
   setIsPlaying: (isPlaying) => set({ isPlaying }),
 

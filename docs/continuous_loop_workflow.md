@@ -380,3 +380,27 @@ O Visualizador de Blueprint reduz o atrito psicológico entre o Sandbox Web (Jav
 ### 3. Análise de Resultados e Próximos Passos
 Esta atualização refina brutalmente o valor do INOX como IDE visual. Ter um Node Graph fluído a 60fps rodando nativamente no navegador mostra a viabilidade técnica de criar lógica sem digitar uma linha de código. 
 O Loop contínuo pode seguir agora para refinamento do Sandbox, autenticação real com banco de usuários ou empacotamento.
+## Iteração 18: Controle de Versão Local (Histórico de Commits)
+
+**Objetivo:** Permitir que o desenvolvedor salve estados específicos do seu projeto (snapshots) e possa navegar entre eles livremente, criando uma linha do tempo segura para experimentação sem medo de perder o trabalho feito (seja código, cena 3D ou lógica Blueprint gerada pela IA).
+
+### 1. Implementação
+- **Estado Global (`useStore.ts`):** 
+  - Criada a interface `Commit` que armazena um ID único, mensagem, timestamp e um `snapshot` profundo do estado atual do projeto (contendo `code`, `sceneObjects` e `blueprint`).
+  - Adicionado o array `commits` ao Zustand para manter o histórico na sessão atual.
+  - Implementados os métodos `addCommit(message)` (que faz um *deep copy* seguro dos objetos da cena e do blueprint para evitar mutações indesejadas) e `checkoutCommit(commitId)` (que restaura o estado do projeto para o momento do snapshot escolhido).
+- **Interface de Histórico (`Editor.tsx`):**
+  - Adicionada uma nova aba "Histórico" (representada pelo ícone `GitCommit` do Lucide) no menu central do Editor, ao lado de Preview, Código e Blueprint.
+  - Criado o painel visual da aba de Histórico, que exibe uma linha do tempo vertical (timeline) de todos os commits feitos.
+  - Adicionado o botão "Salvar Snapshot", que solicita ao usuário uma mensagem descritiva e chama o método `addCommit`.
+  - Cada item na linha do tempo exibe metadados vitais: ID do commit, data/hora, quantidade de objetos na cena 3D e se o snapshot possui código/blueprint atrelado.
+  - Adicionado o botão "Restaurar Versão" em cada commit, que, após uma confirmação de segurança, chama o `checkoutCommit` e retorna o usuário imediatamente para a aba de Preview para visualizar as mudanças restauradas.
+
+### 2. Testes e Validação
+- **Criação de Commits:** Adicionar objetos à cena ou alterar o código, ir para a aba Histórico e salvar um snapshot. O commit aparece imediatamente na linha do tempo com os dados corretos (ex: "3 objetos").
+- **Restauração Segura:** Modificar a cena após um commit (ex: deletar todos os objetos) e clicar em "Restaurar Versão" no commit anterior. A cena e o código retornam exatamente ao estado salvo, validando o *deep copy* do estado global.
+- **Navegação UI:** A troca de abas funciona perfeitamente e o layout responsivo da linha do tempo se adapta ao tamanho da tela.
+
+### 3. Análise de Resultados e Próximos Passos
+O Controle de Versão Local traz uma camada essencial de segurança e confiança para o desenvolvedor. Especialmente em um fluxo de trabalho orientado por IA, onde o LLM pode sobrescrever um script que estava funcionando, ter a capacidade de "voltar no tempo" com um clique é crucial.
+Os próximos passos do ciclo contínuo focarão em persistir esse histórico de commits no backend (Supabase) para que as versões sobrevivam ao recarregamento da página, consolidando o INOX como uma ferramenta robusta e persistente.
