@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import * as CANNON from 'cannon-es';
 import { useStore } from '../../store/useStore';
 import { RefreshCw, Maximize2, Loader2, Play, Square, Move, RotateCw, Scaling } from 'lucide-react';
@@ -80,6 +81,13 @@ export default function Viewport3D() {
     // Add Fog for depth
     scene.fog = new THREE.FogExp2('#111827', 0.015);
     scene.background = new THREE.Color('#111827');
+
+    // Environment Map for Realistic PBR Reflections
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const envScene = new RoomEnvironment();
+    scene.environment = pmremGenerator.fromScene(envScene).texture;
+    // We don't set scene.background to the environment to keep the dark aesthetic, just the reflections.
 
     // Clear previous canvas if any (Strict React 18 Effect Handling)
     while (containerRef.current.firstChild) {
