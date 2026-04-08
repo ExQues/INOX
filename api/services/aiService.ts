@@ -109,10 +109,12 @@ CRITICAL INSTRUCTIONS:
   - Node types can include: "EventTick", "EventBeginPlay", "InputAction", "AddActorLocalOffset", "SetActorLocation", "Branch", etc.
   - Put this schema as a stringified JSON inside the "main.json" key of the files object.
 - If the user asks for Web Sandbox logic or mechanics, you MUST generate functional JavaScript for a Three.js and Cannon-es environment.
-  - You have access to these injected variables: `model`, `sceneObjects`, `physicsBodies`, `mixers`, `keys`, `camera`, `world`, `dt`, `THREE`, `CANNON`.
-  - To move the main model, modify `model.position` or if it has a physics body, modify `physicsBodies['preview_model'].velocity`.
-  - For keyboard input, check `if (keys['w']) { ... }`.
-  - Do NOT wrap the generated code in a function declaration. Just provide the raw loop/setup code that will run inside an existing `function(engine) { ... }`.
+  - VERY IMPORTANT: DO NOT create primitive shapes (like BoxGeometry, SphereGeometry, CylinderGeometry) to represent the player or characters. 
+  - ALWAYS use the injected \`model\` variable as the player character (it is a high-quality GLTF model loaded externally).
+  - You have access to these injected variables: \`model\`, \`sceneObjects\`, \`physicsBodies\`, \`mixers\`, \`keys\`, \`camera\`, \`world\`, \`dt\`, \`THREE\`, \`CANNON\`.
+  - To move the main model, modify \`model.position\` or if it has a physics body, modify \`physicsBodies['preview_model'].velocity\`.
+  - For keyboard input, check \`if (keys['w']) { ... }\`.
+  - Do NOT wrap the generated code in a function declaration. Just provide the raw loop/setup code that will run inside an existing \`function(engine) { ... }\`.
 
 Output format:
 {

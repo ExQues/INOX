@@ -68,11 +68,19 @@ export default function Viewport3D() {
     );
     camera.position.set(0, 2, 5);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // performance optimization
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     
+    // Add Fog for depth
+    scene.fog = new THREE.FogExp2('#111827', 0.015);
+    scene.background = new THREE.Color('#111827');
+
     // Clear previous canvas if any (Strict React 18 Effect Handling)
     while (containerRef.current.firstChild) {
       containerRef.current.removeChild(containerRef.current.firstChild);
@@ -87,17 +95,28 @@ export default function Viewport3D() {
     // --- Add Default Scene Elements ---
     
     // Grid Helper
-    const gridHelper = new THREE.GridHelper(20, 20, '#334155', '#1e293b');
+    const gridHelper = new THREE.GridHelper(50, 50, '#334155', '#1e293b');
+    gridHelper.position.y = 0.01; // Avoid Z-fighting with objects exactly at 0
     scene.add(gridHelper);
 
-    // Ambient Light
-    const ambientLight = new THREE.AmbientLight('#ffffff', 0.4);
-    scene.add(ambientLight);
+    // Hemisphere Light (Better ambient lighting for characters)
+    const hemiLight = new THREE.HemisphereLight('#ffffff', '#444444', 0.6);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
 
     // Directional Light
-    const dirLight = new THREE.DirectionalLight('#ffffff', 1);
+    const dirLight = new THREE.DirectionalLight('#ffffff', 1.2);
     dirLight.position.set(5, 10, 7);
     dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 50;
+    dirLight.shadow.camera.left = -10;
+    dirLight.shadow.camera.right = 10;
+    dirLight.shadow.camera.top = 10;
+    dirLight.shadow.camera.bottom = -10;
+    dirLight.shadow.bias = -0.0001;
     scene.add(dirLight);
 
     // Default Player/Cube
