@@ -14,6 +14,7 @@ Onde a mágica gráfica acontece. A Web é o controle, a Unreal é o motor de re
 - **Iteração 27 (Exportação de Nível UMAP):** Criar a conversão do estado React `sceneObjects` para um formato JSON estruturado (`.umap` proxy) que o script Python da UE5 entenda perfeitamente (Coordenadas, Rotação, Escala, Asset ID).
 - **Iteração 28 (Sincronização de Blueprints):** O script gerado pela IA no Editor Web deve ser mapeado para "Nós" de Blueprint. O script Python (`ai_bridge.py`) receberá esse mapeamento e construirá as Blueprints na Unreal usando a *Unreal Python API*.
 - **Iteração 29 (Live Sync Bidirecional):** Estabelecer um servidor WebSocket entre o INOX Web e a máquina local rodando a UE5. Moveu um objeto na aba Web? Ele move na Unreal em milissegundos.
+- **DIRETIVA EXECUTIVA (Pixel Streaming):** A renderização principal do editor deixa de ser o WebGL local (Three.js) e passa a ser um Iframe WebRTC recebendo o feed de vídeo diretamente da Unreal Engine (Pixel Streaming). É a única forma de renderizar *Hair Strands*, *SSS* e texturas 8K no navegador do usuário sem travamentos. O INOX se torna oficialmente uma plataforma de Cloud Gaming para desenvolvimento.
 
 ### FASE 3: Plataforma Social e Multiplayer
 Jogos não se fazem sozinhos.
