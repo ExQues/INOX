@@ -444,3 +444,24 @@ O Editor Web do INOX Game Creator atingiu um estado de persistência "grau de es
 ### 3. Análise de Resultados e Próximos Passos
 Esta iteração conclui o escopo visual de "Pipeline de Estúdio" para o INOX (Prototipação, Código IA, Blueprints, Commit e Build). A interface do Editor está extremamente robusta e feature-complete.
 Para a continuação deste ciclo infinito (Iteração 21), seria adequado focar no **Dashboard** do usuário, criando uma lista de projetos bonita onde ele possa finalmente fazer o "Download" da Build que acabou de gerar.
+## Iteração 21: Dashboard Real e Gestão de Projetos
+
+**Objetivo:** Conectar a tela inicial do usuário (Dashboard) ao banco de dados real do Supabase, substituindo o mock de frontend. O Dashboard deve exibir a listagem real dos jogos, contagem de snapshots (commits), ícones dinâmicos de plataforma e permitir a criação nativa de projetos.
+
+### 1. Implementação
+- **Integração Real (Fetch):** O componente `Dashboard.tsx` foi refatorado para utilizar o método `getProjects()` nativo do `supabase.ts`, populando o estado global (`useStore`) via `useEffect` assim que a página carrega.
+- **Criação de Projetos Real:** A função `handleCreateNewProject` abandonou o gerador de ID local e passou a invocar a API `createProject()` que registra a nova entrada na tabela `projects` do backend e devolve a resposta sincronizada, abrindo em seguida o Editor.
+- **Refinamento de UI/UX:**
+  - O estado de carregamento (`isLoadingProjects`) foi adicionado, mostrando um elegante *spinner* roxo com a logo da plataforma para evitar o piscar (flicker) de "Nenhum projeto".
+  - O card de cada projeto agora exibe o número total de snapshots/commits daquele projeto, reforçando a ideia de histórico (UX No-Code).
+  - Ícones dinâmicos de acordo com a plataforma selecionada (Desktop = `Box`, Mobile = `Smartphone`, Web = `Monitor`).
+  - Adicionado um botão simulado de "Download Build" que orienta o usuário a gerar o empacotamento antes de baixar.
+
+### 2. Testes e Validação
+- O build `vite` passou sem falhas (`npm run build`).
+- Navegação testada: Ao clicar em "Novo Projeto", a latência da API exibe loading, o projeto é persistido e a IDE (Editor) abre corretamente com os dados frescos do Supabase.
+- A UI se comporta graciosamente tanto se o usuário tem 0 projetos (exibe *call-to-action*) quanto se ele possui um histórico longo.
+
+### 3. Análise de Resultados e Próximos Passos
+O Loop Contínuo amadureceu o sistema ao ponto em que todas as pontas se ligam. O usuário entra no painel real, cria um projeto, edita a cena 3D e a lógica, comita as versões local e nuvem e simula o empacotamento, tudo de forma coesa. 
+O próximo passo da iteração (Iteração 22) seria focar na autoria colaborativa ou na compilação do chat da IA para ler o script do ambiente e sugerir correções de lógica reais.
