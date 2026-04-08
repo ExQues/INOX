@@ -370,6 +370,7 @@ export const syncProjectToUnreal = async (req: CustomRequest, res: Response) => 
       name: project.name || `SyncMap_${Date.now()}`,
       action: 'sync_scene',
       scene_objects: unrealSceneObjects,
+      code_structure: project.code_structure, // Injeta o código/blueprint atual para o bridge ler
       create_new_map: false,
       export_version: '1.0.0',
       timestamp: new Date().toISOString()

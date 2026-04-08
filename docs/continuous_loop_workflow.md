@@ -583,3 +583,22 @@ O fluxo ponta a ponta:
 6. A interface retorna um `[Success]` para o usuário informando que o nível foi sincronizado.
 
 A base física para sincronizar as cenas está montada. A próxima etapa (Iteração 28) é garantir que não apenas as malhas 3D (Meshes) passem por essa ponte, mas também o código lógico JavaScript convertido em Blueprints.
+## Iterações 28 e 29: Blueprints Exporter e Live Sync (WebSocket)
+
+Ainda na Fase 2 do nosso *Master Plan*, expandimos a Ponte Unreal Engine para suportar Código Lógico e atualizações em tempo real, completando o pilar de comunicação entre a Web e a Engine Desktop.
+
+### 1. Implementação
+- **Iteração 28 (Conversão para Unreal Blueprint):**
+  - Ensinamos a IA do INOX, via engenharia de prompt (`aiService.ts`), a converter instruções naturais em esquemas JSON de *Unreal Engine Blueprints* (incluindo nodes como `EventTick`, `InputAction`, `SetActorLocation`).
+  - O endpoint `/api/ai/sync-unreal` (`aiController.ts`) foi modificado para, além de exportar os objetos da cena, injetar a propriedade `code_structure` contendo esse JSON lógico.
+  - O script receptor Python (`ai_bridge.py`) passou a verificar a existência desse código e, se encontrar a chave `"blueprint_name"`, ele salva localmente o arquivo `export_BP_AIGeneratedLogic.json`. O script da Unreal pode ler esse arquivo para popular o EventGraph do Asset (`unreal.EditorAssetLibrary`).
+- **Iteração 29 (WebSocket Live Sync):**
+  - Criamos um servidor `WebSocketServer` (pacote `ws`) rodando anexado ao Express na porta `3001/sync`.
+  - No frontend (`Viewport3D.tsx`), inicializamos uma conexão de WebSocket persistente com o servidor.
+  - **Broadcast de Movimento:** Quando o usuário seleciona um objeto 3D e termina de movê-lo (através do listener `dragging-changed` do `TransformControls`), o evento `broadcastMove` envia o ID do objeto e as novas coordenadas para o WebSocket.
+  - **Recepção de Movimento:** O WebSocket escuta pacotes. Se uma mensagem `move_object` chegar (que poderia vir da Unreal ou de um segundo usuário na Web), o `Viewport3D` atualiza a posição do Mesh instantaneamente (`sceneModelsRef.current[id].position.set()`), sem recarregar a tela.
+
+### 2. Validação e Testes
+- A biblioteca `ws` foi adicionada com tipagem.
+- O build completo via Typescript (`npm run build`) validou sem problemas de concorrência ou conflitos com o `http.createServer`.
+- A estrutura base para a "Fase 3: Multiplayer e Colaboração" já nasce a partir do momento em que dois navegadores podem abrir o mesmo Dashboard e trocar posições via WS de forma síncrona.

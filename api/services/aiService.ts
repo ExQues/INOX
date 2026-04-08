@@ -104,7 +104,10 @@ CRITICAL INSTRUCTIONS:
 - You must ONLY return a valid JSON object matching the exact structure requested.
 - DO NOT include markdown code blocks (like \`\`\`json) in your response. Just the raw JSON object.
 - NO explanatory text before or after the JSON.
-- If the user asks for "Unreal", "Blueprint", "Lógica AAA" or mentions Unreal features, you MUST generate a JSON schema representing an Unreal Engine Blueprint (nodes, connections, variables). Put this schema as a stringified JSON inside the "main.json" key of the files object.
+- If the user asks for "Unreal", "Blueprint", "Lógica AAA", or "Converter lógica JS em Blueprint", you MUST generate a JSON schema representing an Unreal Engine Blueprint (nodes, connections, variables). 
+  - The JSON MUST have a root key "blueprint_name" and a "nodes" array.
+  - Node types can include: "EventTick", "EventBeginPlay", "InputAction", "AddActorLocalOffset", "SetActorLocation", "Branch", etc.
+  - Put this schema as a stringified JSON inside the "main.json" key of the files object.
 - If the user asks for Web Sandbox logic or mechanics, you MUST generate functional JavaScript for a Three.js and Cannon-es environment.
   - You have access to these injected variables: `model`, `sceneObjects`, `physicsBodies`, `mixers`, `keys`, `camera`, `world`, `dt`, `THREE`, `CANNON`.
   - To move the main model, modify `model.position` or if it has a physics body, modify `physicsBodies['preview_model'].velocity`.

@@ -194,7 +194,7 @@ export default function Editor() {
             setMessages(prev => [...prev, { role: 'assistant', content: "❌ Ocorreu um erro ao buscar o asset AAA." }]);
           }
         }
-      } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código') || userMessage.toLowerCase().includes('lógica')) {
+      } else if (userMessage.toLowerCase().includes('script') || userMessage.toLowerCase().includes('código') || userMessage.toLowerCase().includes('lógica') || userMessage.toLowerCase().includes('blueprint')) {
         aiResponse = "Gerando o script de comportamento... \n\nVou adicionar a lógica no seu painel de código para que possamos testar.";
         setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
 
@@ -656,7 +656,7 @@ export default function Editor() {
                 Otimizar
               </button>
               <button 
-                onClick={() => setChatMessage('Converta esta lógica JS em Blueprint Unreal')}
+                onClick={() => setChatMessage('Converta a lógica JS atual em Blueprint Unreal')}
                 className="text-[11px] px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-full border border-slate-600 transition-colors flex items-center gap-1.5"
               >
                 <Workflow className="w-3 h-3 text-purple-400" />

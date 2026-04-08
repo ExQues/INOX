@@ -137,6 +137,7 @@ export default function Viewport3D() {
             rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
             scale: [obj.scale.x, obj.scale.y, obj.scale.z]
           });
+          broadcastMove(id, obj);
         }
       }
     });
@@ -146,6 +147,30 @@ export default function Viewport3D() {
     // Setup Raycaster for selection
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+
+    // Live Sync (Mock) WebSocket
+    let ws: WebSocket | null = null;
+    try {
+      ws = new WebSocket(`ws://${window.location.hostname}:3001/sync`);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.action === 'move_object' && data.objectId && sceneModelsRef.current[data.objectId]) {
+            sceneModelsRef.current[data.objectId].position.set(data.position.x, data.position.y, data.position.z);
+          }
+        } catch (e) {}
+      };
+    } catch(e) {}
+
+    const broadcastMove = (objectId: string, obj: THREE.Object3D) => {
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          action: 'move_object',
+          objectId,
+          position: { x: obj.position.x, y: obj.position.y, z: obj.position.z }
+        }));
+      }
+    };
 
     const onMouseClick = (event: MouseEvent) => {
       if (!containerRef.current || isPlaying) return;

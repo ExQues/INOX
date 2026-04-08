@@ -100,6 +100,16 @@ def parse_and_create_blueprint(logic_json_str):
         blueprint_name = logic_data.get("blueprint_name", "BP_AIGeneratedLogic")
         nodes = logic_data.get("nodes", [])
         
+        # Save the blueprint JSON locally as a proxy for the uasset export process
+        try:
+            import os
+            export_path = os.path.join(os.getcwd(), "ue_scripts", f"export_{blueprint_name}.json")
+            with open(export_path, 'w') as f:
+                json.dump(logic_data, f, indent=4)
+            print(f"[AI-BRIDGE] 💾 Blueprint JSON exportado para: {export_path}")
+        except Exception as e:
+            print(f"[AI-BRIDGE] ⚠️ Aviso: Não foi possível exportar JSON de Blueprint: {e}")
+
         print(f"[AI-BRIDGE] Criando Asset: /Game/Blueprints/{blueprint_name}")
         print(f"[AI-BRIDGE] Injetando {len(nodes)} Nodes no EventGraph...")
         
