@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 import BlueprintGraph from '../components/editor/BlueprintGraph';
+import PixelStreamingSimulator from '../components/editor/PixelStreamingSimulator';
 import EditorCode from 'react-simple-code-editor';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
@@ -424,34 +425,7 @@ export default function Editor() {
           <div className="flex-1 p-4 flex items-center justify-center pt-16">
             {activeTab === 'preview' ? (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-black flex items-center justify-center overflow-hidden relative shadow-2xl">
-                {/* 
-                  Pixel Streaming Iframe (WebRTC) 
-                  Connected to local UE5 instance running the project.
-                  Fallback to loading screen if UE5 is not running.
-                */}
-                {isSyncing ? (
-                  <div className="flex flex-col items-center gap-4 text-orange-500">
-                    <Loader2 className="w-12 h-12 animate-spin" />
-                    <p className="font-mono tracking-widest text-sm">INICIANDO PIXEL STREAMING AAA...</p>
-                  </div>
-                ) : (
-                  <iframe 
-                    src="http://localhost:80" // Default Pixel Streaming Signaling Server Port
-                    className="w-full h-full border-0 bg-black"
-                    title="Unreal Engine Pixel Streaming"
-                    sandbox="allow-scripts allow-same-origin allow-pointer-lock"
-                    onError={(e) => console.log('Pixel streaming server not active. Run UE5 first.')}
-                  />
-                )}
-                
-                {/* Fallback Overlay for Development/Demo purposes when UE5 is off */}
-                <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 hover:opacity-100 transition-opacity duration-500">
-                  <Monitor className="w-16 h-16 text-slate-500 mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">Unreal Engine Pixel Streaming</h3>
-                  <p className="text-slate-400 max-w-md text-center">
-                    A renderização AAA requer que o projeto esteja rodando na Unreal Engine localmente com o plugin de Pixel Streaming ativado. Clique em <strong>Sync UE5</strong> para iniciar.
-                  </p>
-                </div>
+                <PixelStreamingSimulator isSyncing={isSyncing} />
               </div>
             ) : activeTab === 'blueprint' ? (
               <div className="w-full h-full rounded-xl border border-slate-700/50 bg-[#1d1f21] flex flex-col overflow-hidden shadow-2xl relative">
