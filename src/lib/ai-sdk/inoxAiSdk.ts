@@ -61,6 +61,8 @@ export interface ChatRequest {
     role: 'user' | 'assistant';
     content: string;
   }>;
+  currentCode?: string | null;
+  consoleErrors?: string[];
 }
 
 export interface ChatResponse {

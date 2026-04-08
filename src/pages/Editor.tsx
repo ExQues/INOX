@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   ArrowLeft, Play, Square, Save, Settings, Layers,
   Code, Box, Image as ImageIcon, FileText,
-  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow, GitCommit, Package
+  MessageSquare, Terminal, Send, Loader2, Sparkles, Check, Monitor, Trash2, AlertCircle, Info, Workflow, GitCommit, Package, Zap
 } from 'lucide-react';
 import Viewport3D from '../components/editor/Viewport3D';
 import BlueprintGraph from '../components/editor/BlueprintGraph';
@@ -201,7 +201,9 @@ export default function Editor() {
         // 1. Inicia requisição de chat real para gerar código
         const chatResponse = await aiSdk.chat({
           projectId: currentProject?.id || 'temp',
-          message: userMessage
+          message: userMessage,
+          currentCode: activeCode,
+          consoleErrors: consoleLogs.filter(l => l.type === 'error').map(l => l.message).slice(-5) // Send up to 5 most recent errors
         });
 
         if (chatResponse.activeCode) {
@@ -643,6 +645,33 @@ export default function Editor() {
             
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Quick Suggestions / Context Actions */}
+          {!isGenerating && (
+            <div className="px-4 pb-2 flex gap-2 overflow-x-auto custom-scrollbar whitespace-nowrap">
+              <button 
+                onClick={() => setChatMessage('Corrija os erros de console no meu script')}
+                className="text-[11px] px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-full border border-slate-600 transition-colors flex items-center gap-1.5"
+              >
+                <AlertCircle className="w-3 h-3 text-yellow-400" />
+                Corrigir Erros
+              </button>
+              <button 
+                onClick={() => setChatMessage('Otimize meu script para melhor performance')}
+                className="text-[11px] px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-full border border-slate-600 transition-colors flex items-center gap-1.5"
+              >
+                <Zap className="w-3 h-3 text-blue-400" />
+                Otimizar
+              </button>
+              <button 
+                onClick={() => setChatMessage('Converta esta lógica JS em Blueprint Unreal')}
+                className="text-[11px] px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-full border border-slate-600 transition-colors flex items-center gap-1.5"
+              >
+                <Workflow className="w-3 h-3 text-purple-400" />
+                Gerar Blueprint
+              </button>
+            </div>
+          )}
           
           <div className="p-4 border-t border-slate-700/50 bg-slate-800/50">
             <div className="relative flex items-end gap-2 bg-slate-900 border border-slate-700 rounded-xl p-2 focus-within:ring-1 focus-within:ring-purple-500 focus-within:border-purple-500 transition-all">

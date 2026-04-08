@@ -465,3 +465,25 @@ Para a continuação deste ciclo infinito (Iteração 21), seria adequado focar 
 ### 3. Análise de Resultados e Próximos Passos
 O Loop Contínuo amadureceu o sistema ao ponto em que todas as pontas se ligam. O usuário entra no painel real, cria um projeto, edita a cena 3D e a lógica, comita as versões local e nuvem e simula o empacotamento, tudo de forma coesa. 
 O próximo passo da iteração (Iteração 22) seria focar na autoria colaborativa ou na compilação do chat da IA para ler o script do ambiente e sugerir correções de lógica reais.
+## Iteração 22: Contexto Inteligente da IA e Sugestões Rápidas
+
+**Objetivo:** Transformar a IA em um par de programação de verdade (Pair Programming). Em vez de um chat genérico que não sabe o que o usuário está fazendo, a IA deve conseguir "ler" a aba de Código ativa e os erros do Console em tempo real. Adicionalmente, inserimos atalhos na UI para prompts comuns, reduzindo o atrito da digitação.
+
+### 1. Implementação
+- **Extensão do SDK e Controller:**
+  - O contrato de dados (`inoxAiSdk.ts` e `ChatRequest`) foi ampliado para suportar `currentCode` (string) e `consoleErrors` (array de strings).
+  - No backend (`aiController.ts`), o método `chatWithAi` intercepta esses campos opcionais. Se presentes, o prompt recebido do usuário ganha apêndices textuais (`[CONTEXT] Current Code:` e `[CONTEXT] Console Errors:`), fornecendo o cenário exato para o modelo LLM em background.
+- **Injeção no Frontend (`Editor.tsx`):**
+  - O payload `handleSendMessage` agora empacota `activeCode` no campo `currentCode`.
+  - Mais importante: ele extrai do estado global `consoleLogs` os últimos 5 logs que sejam do tipo `'error'` e os injeta no campo `consoleErrors`. A IA agora *sabe* que o script do usuário falhou com `SyntaxError`.
+- **UX de Sugestões Rápidas (Chips):**
+  - Adicionado um container de *chips* logo acima da caixa de texto de chat, renderizado apenas quando a IA não está gerando algo (`!isGenerating`).
+  - Botões criados: "Corrigir Erros" (ícone AlertCircle amarelo), "Otimizar" (ícone Zap azul) e "Gerar Blueprint" (ícone Workflow roxo). Ao clicar, eles preenchem o input com o prompt ideal de contexto e estão prontos para envio.
+
+### 2. Testes e Validação
+- Verificado o empacotamento da rede no payload via Chrome DevTools. Ao clicar em "Corrigir Erros" com um erro forçado no Editor, o payload enviado para o `/api/ai/chat` contém perfeitamente a chave `consoleErrors: ["ReferenceError: X is not defined"]` e a chave `currentCode: "function update..."`.
+- A estética dos *chips* se integrou de forma natural à barra lateral da IA sem poluir a visão, e eles respondem a hover adequadamente.
+
+### 3. Análise de Resultados e Próximos Passos
+O "Assistente Rockstar" deixou de ser reativo e cego para se tornar hiper-contextualizado. A experiência agora se assemelha a ferramentas de ponta como Cursor ou Copilot, com a vantagem de ler um "Console de Game Engine" em tempo real. 
+O ciclo de aprimoramento contínuo nos leva, agora, à maturidade da plataforma. O passo ideal da próxima iteração (Iteração 23) seria tratar a Autenticação de Usuário (Auth) e permissões de sessão para que o Dashboard possa de fato proteger os projetos de usuários distintos.

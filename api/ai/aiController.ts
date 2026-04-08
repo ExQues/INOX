@@ -132,15 +132,23 @@ export const modifyCode = async (req: CustomRequest, res: Response) => {
 
 export const chatWithAi = async (req: CustomRequest, res: Response) => {
   try {
-    const { projectId, message, conversationHistory } = req.body;
+    const { projectId, message, conversationHistory, currentCode, consoleErrors } = req.body;
 
     const project = await getProject(projectId);
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    let contextualPrompt = message;
+    if (currentCode) {
+      contextualPrompt += `\n\n[CONTEXT] Current Code:\n\`\`\`javascript\n${currentCode}\n\`\`\``;
+    }
+    if (consoleErrors && consoleErrors.length > 0) {
+      contextualPrompt += `\n\n[CONTEXT] Console Errors:\n${consoleErrors.join('\n')}`;
+    }
+
     const response = await generateGameCode({
-      prompt: message,
+      prompt: contextualPrompt,
       platform: project.platform,
       context: project.code_structure,
       conversationHistory,
