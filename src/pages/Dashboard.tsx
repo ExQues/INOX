@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Plus, Gamepad2, FolderOpen, Zap, Clock, TrendingUp, Monitor, Box, Smartphone, GitCommit, Download } from 'lucide-react';
-import { getProjects, createProject } from '../lib/supabase';
+import { Plus, Gamepad2, FolderOpen, Zap, Clock, TrendingUp, Monitor, Box, Smartphone, GitCommit, Download, LogOut } from 'lucide-react';
+import { getProjects, createProject, supabase } from '../lib/supabase';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -61,6 +61,11 @@ export default function Dashboard() {
     recentProjects: projects.slice(0, 5),
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       <header className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50">
@@ -82,9 +87,16 @@ export default function Dashboard() {
                   {user?.full_name?.[0] || user?.email?.[0] || 'U'}
                 </div>
                 <div className="hidden sm:block">
-                  <p className="text-sm font-medium">{user?.full_name || 'Usuário'}</p>
+                  <p className="text-sm font-medium">{user?.full_name || user?.email?.split('@')[0] || 'Usuário'}</p>
                   <p className="text-xs text-slate-400">{user?.plan === 'free' ? 'Plano Free' : user?.plan === 'pro' ? 'Plano Pro' : 'Plano Enterprise'}</p>
                 </div>
+                <button 
+                  onClick={handleLogout}
+                  className="ml-2 p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 transition-colors border border-transparent hover:border-slate-700"
+                  title="Sair"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
 
               <button

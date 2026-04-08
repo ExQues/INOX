@@ -602,3 +602,23 @@ Ainda na Fase 2 do nosso *Master Plan*, expandimos a Ponte Unreal Engine para su
 - A biblioteca `ws` foi adicionada com tipagem.
 - O build completo via Typescript (`npm run build`) validou sem problemas de concorrência ou conflitos com o `http.createServer`.
 - A estrutura base para a "Fase 3: Multiplayer e Colaboração" já nasce a partir do momento em que dois navegadores podem abrir o mesmo Dashboard e trocar posições via WS de forma síncrona.
+## Iteração 30: Autenticação Real e Rotas Protegidas (Fase 3)
+
+Iniciando a Fase 3 do Master Plan (Plataforma Social), a necessidade de distinguir projetos entre usuários tornou-se prioritária. O sistema precisa saber *quem* está pedindo o Pixel Streaming e *de quem* são os projetos sendo salvos no banco.
+
+### 1. Implementação de Autenticação
+- **Página de Login (`Auth.tsx`):** Criada uma página de login com design moderno, efeitos de *blur*, responsiva e com suporte a:
+  - Registro de novos usuários com Nome e E-mail.
+  - Login via E-mail/Senha.
+  - "Conta Demo" (Fallback com clique único para testes rápidos de avaliação).
+- **Roteamento Protegido (`ProtectedRoute.tsx`):**
+  - Implementado um Wrapper no React Router DOM que intercepta rotas privadas (`/dashboard`, `/editor`).
+  - Se o estado do usuário global (`useStore`) for nulo, a aplicação redireciona forçosamente para `/auth`.
+- **Sincronização Ativa (`App.tsx`):**
+  - O aplicativo raiz agora escuta o evento `onAuthStateChange` do Supabase. Se um cookie expirar ou o usuário for deslogado em outra aba, o estado do Zustand é destruído e o usuário volta pra tela de login.
+
+### 2. Dashboard Pessoal
+- A função de buscar projetos (`getProjects` em `supabase.ts`) já estava blindada no backend via Row Level Security (RLS) baseada em `user.id`.
+- O Header da Dashboard agora conta com o botão nativo de "Sair" (Logout - ícone `LogOut` da Lucide) e reflete os dados corretos de nome e email do perfil autenticado.
+
+A base social está montada. A próxima iteração (Iteração 31) pode focar no envio de convites de colaboração ou na arquitetura de Marketplace.
