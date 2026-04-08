@@ -540,3 +540,22 @@ Tornando o INOX um negócio sustentável.
 - **Iteração 33 (Marketplace de Lógicas):** Criar uma loja dentro do INOX onde usuários podem publicar "Scripts de Inventário" ou "Blueprints de Tiro" criados por IA, vendendo ou compartilhando com a comunidade.
 - **Iteração 34 (Cloud Build Pipelines):** Conectar o botão "Exportar" (criado na iteração 20) a um servidor de CI/CD (ex: AWS ou GitHub Actions) que pegue o projeto e gere um `.exe` executável real para Windows, enviando o link de download pro usuário.
 - **Iteração 35 (Geração Procedural de Mundos por Prompt):** A IA não só insere objetos, mas gera regras. "Crie uma cidade cyberpunk". A IA do INOX instrui o PCG da Unreal Engine a construir o quarteirão inteiro baseado em splines desenhadas na Web.
+## Iterações 24, 25 e 26: Interatividade, Assets AAA e Câmera
+
+Dando início ao Master Plan, o foco destas três iterações consecutivas foi transformar a visualização estática dos modelos 3D em um ambiente realmente jogável (Gameplay).
+
+### 1. Implementações
+- **Iteração 24 (Teclado e Física WASD):**
+  - Adicionamos listeners globais de teclado (`keydown`, `keyup`) no componente `Viewport3D.tsx`, criando o dicionário `keys` e passando ele para o `engineContext`.
+  - O prompt de sistema do LLM (no `aiService.ts`) foi agressivamente reescrito. Agora a IA sabe exatamente quais variáveis estão disponíveis (como `keys['w']`, `model.position`, `physicsBodies`) e é orientada a gerar scripts JavaScript sem encapsulamentos desnecessários, prontos para rodar no *game loop* do Editor.
+- **Iteração 25 (Biblioteca Visual Quixel/MetaHumans):**
+  - Refatoramos a barra lateral esquerda do `Editor.tsx`. Ela deixou de ser um placeholder genérico e agora exibe os Assets AAA gerados dinamicamente pela IA no formato de cartões escuros com tipografia laranja (Quixel vibe).
+  - O clique no asset não substitui mais o modelo central: ele instancia o modelo na cena (`addSceneObject`) caindo do ar (`y: 5`) para que o usuário possa testar a gravidade/física.
+- **Iteração 26 (Câmera Follow 3ª Pessoa):**
+  - Injetamos um utilitário nativo chamado `updateThirdPersonCamera(targetPosition, offset)` diretamente no escopo de scripts do usuário.
+  - Ele utiliza a função `lerp` do Three.js para interpolar suavemente a câmera seguindo o personagem, eliminando a necessidade de a IA escrever matemáticas complexas de Quaternions e Matrizes a cada prompt de movimento.
+
+### 2. Testes e Validação
+- O loop de física está responsivo. Os assets são renderizados individualmente com o `GLTFLoader`.
+- O payload de contexto da IA absorveu perfeitamente a nova instrução de sistema (System Prompt).
+- Todas as alterações foram salvas e documentadas, pavimentando o caminho para o "Phase 2" do Master Plan (Bridge para Unreal Engine).

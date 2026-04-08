@@ -329,52 +329,44 @@ export default function Editor() {
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
         <aside className="w-14 sm:w-64 border-r border-slate-700/50 bg-slate-800/30 flex flex-col shrink-0 transition-all duration-300">
-          <div className="p-3 border-b border-slate-700/50 flex items-center gap-3 hidden sm:flex">
-            <Layers className="w-5 h-5 text-purple-400" />
-            <span className="font-semibold text-white">Assets do Projeto</span>
+          <div className="p-3 border-b border-slate-700/50 flex items-center gap-3 hidden sm:flex bg-slate-800/80">
+            <Layers className="w-5 h-5 text-orange-400" />
+            <span className="font-semibold text-white">Quixel / MetaHumans</span>
           </div>
           
           <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
             <div className="px-2 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 px-3 tracking-wider hidden sm:block">Modelos 3D</div>
+              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 px-3 tracking-wider hidden sm:block">Biblioteca AAA</div>
               {projectAssets.filter(a => a.type === 'model').length > 0 ? (
                 projectAssets.filter(a => a.type === 'model').map((asset) => (
                   <button 
                     key={asset.id}
                     onClick={() => {
-                      // Instead of replacing the active model, we add it to the scene
                       addSceneObject({
                         id: `instance_${Date.now()}`,
                         assetId: asset.id,
                         name: asset.name,
                         url: asset.url,
-                        position: [(Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4], // Random spawn position
+                        position: [0, 5, 0], // Drop from slightly above to trigger physics
                         rotation: [0, 0, 0],
                         scale: [1, 1, 1]
                       });
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group"
-                    title={asset.name}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-700/50 bg-slate-800 border border-slate-700 text-slate-300 hover:text-white transition group shadow-sm mb-2"
+                    title={`Adicionar ${asset.name} à cena`}
                   >
-                    <Box className="w-4 h-4 shrink-0 group-hover:text-purple-400" />
-                    <span className="text-sm truncate hidden sm:block">{asset.name}</span>
+                    <Box className="w-5 h-5 shrink-0 text-orange-500 group-hover:text-orange-400" />
+                    <div className="flex flex-col items-start hidden sm:flex">
+                      <span className="text-sm font-medium truncate">{asset.name}</span>
+                      <span className="text-[10px] text-slate-500 truncate">{asset.id.split('_')[0]} Asset</span>
+                    </div>
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-2 text-xs text-slate-500 italic hidden sm:block">Nenhum modelo gerado.</div>
+                <div className="px-3 py-4 text-xs text-slate-500 italic hidden sm:block text-center bg-slate-800/50 rounded-lg border border-slate-700/50">
+                  Nenhum asset AAA gerado pela IA ainda. Peça no chat para gerar modelos 3D.
+                </div>
               )}
-              
-              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 mt-4 px-3 tracking-wider hidden sm:block">Texturas</div>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group">
-                <ImageIcon className="w-4 h-4 group-hover:text-blue-400" />
-                <span className="text-sm hidden sm:block">Texturas Base</span>
-              </button>
-              
-              <div className="text-[10px] uppercase font-bold text-slate-500 mb-2 mt-4 px-3 tracking-wider hidden sm:block">Scripts</div>
-              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition group">
-                <FileText className="w-4 h-4 group-hover:text-green-400" />
-                <span className="text-sm hidden sm:block">Lógica (main.js)</span>
-              </button>
             </div>
           </div>
           

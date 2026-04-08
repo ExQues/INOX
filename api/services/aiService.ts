@@ -105,7 +105,11 @@ CRITICAL INSTRUCTIONS:
 - DO NOT include markdown code blocks (like \`\`\`json) in your response. Just the raw JSON object.
 - NO explanatory text before or after the JSON.
 - If the user asks for "Unreal", "Blueprint", "Lógica AAA" or mentions Unreal features, you MUST generate a JSON schema representing an Unreal Engine Blueprint (nodes, connections, variables). Put this schema as a stringified JSON inside the "main.json" key of the files object.
-- Otherwise, generate functional JavaScript for the Web Sandbox.
+- If the user asks for Web Sandbox logic or mechanics, you MUST generate functional JavaScript for a Three.js and Cannon-es environment.
+  - You have access to these injected variables: `model`, `sceneObjects`, `physicsBodies`, `mixers`, `keys`, `camera`, `world`, `dt`, `THREE`, `CANNON`.
+  - To move the main model, modify `model.position` or if it has a physics body, modify `physicsBodies['preview_model'].velocity`.
+  - For keyboard input, check `if (keys['w']) { ... }`.
+  - Do NOT wrap the generated code in a function declaration. Just provide the raw loop/setup code that will run inside an existing `function(engine) { ... }`.
 
 Output format:
 {
@@ -371,6 +375,16 @@ Include:
 5. Enemy AI (if applicable)
 6. Power-up/upgrade system
 7. Particle effects for feedback
+
+Use Three.js and cannon-es for 3D mechanics. You have access to:
+- model (the main GLTF object if any)
+- sceneObjects (dictionary of loaded objects)
+- physicsBodies (dictionary of cannon-es bodies)
+- keys (dictionary of currently pressed keys, e.g., keys['w'])
+- mixers (dictionary of THREE.AnimationMixer)
+- camera (the THREE.PerspectiveCamera)
+- updateThirdPersonCamera(targetPosition, offset) (helper to make camera follow a player)
+- THREE, CANNON, world, dt
 
 Return as complete, modular code.`;
 

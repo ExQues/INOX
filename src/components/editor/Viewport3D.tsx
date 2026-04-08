@@ -189,6 +189,13 @@ export default function Viewport3D() {
 
     renderer.domElement.addEventListener('pointerdown', onMouseClick);
 
+    // Keyboard input state
+    const keys: { [key: string]: boolean } = {};
+    const handleKeyDown = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = true; };
+    const handleKeyUp = (e: KeyboardEvent) => { keys[e.key.toLowerCase()] = false; };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
     // Create Engine Context for user scripts
     const engineContext = {
       scene,
@@ -200,6 +207,7 @@ export default function Viewport3D() {
       getSceneObjects: () => sceneModelsRef.current,
       getPhysicsBodies: () => physicsBodiesRef.current,
       getMixers: () => mixersRef.current,
+      getKeys: () => keys, // Pass keyboard state
       getDeltaTime: () => 1 / 60, // Fixed timestep for now
       log: (type: 'log' | 'warn' | 'error', message: string) => {
         addLog({ type, message });
@@ -274,6 +282,8 @@ export default function Viewport3D() {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
       resizeObserver.disconnect();
       
       if (animationFrameId.current) {
@@ -576,7 +586,22 @@ export default function Viewport3D() {
               const sceneObjects = engine.getSceneObjects();
               const physicsBodies = engine.getPhysicsBodies();
               const mixers = engine.getMixers();
+              const keys = engine.getKeys();
+              const camera = engine.camera;
               
+              // Helper para câmera em 3ª pessoa
+              const updateThirdPersonCamera = (targetPosition, offset = {x: 0, y: 3, z: 5}) => {
+                camera.position.lerp(
+                  new THREE.Vector3(
+                    targetPosition.x + offset.x,
+                    targetPosition.y + offset.y,
+                    targetPosition.z + offset.z
+                  ), 
+                  0.1
+                );
+                camera.lookAt(targetPosition);
+              };
+
               // Custom Console
               const console = {
                 log: (...args) => engine.log('log', args.join(' ')),
