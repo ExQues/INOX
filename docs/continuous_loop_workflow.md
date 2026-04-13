@@ -622,3 +622,22 @@ Iniciando a Fase 3 do Master Plan (Plataforma Social), a necessidade de distingu
 - O Header da Dashboard agora conta com o botão nativo de "Sair" (Logout - ícone `LogOut` da Lucide) e reflete os dados corretos de nome e email do perfil autenticado.
 
 A base social está montada. A próxima iteração (Iteração 31) pode focar no envio de convites de colaboração ou na arquitetura de Marketplace.
+## Iteração 31: Sistema de Cloud Build (Pipeline Unreal Engine)
+
+Na Fase 4 do Master Plan (Ecossistema e Monetização), o usuário precisa poder "sair" da plataforma com o seu produto final. Para isso, foi implementado o **Cloud Build Pipeline**.
+
+### 1. Funcionalidade de Empacotamento
+- **Interface de Build:** O modal original que apenas exibia um alerta foi expandido para uma janela de sistema profissional cobrindo a tela do Editor.
+- **Progressão Simulada:** Quando o usuário clica em "Desktop (Windows/Mac)", o INOX inicia um terminal *mockado* que exibe, linha por linha, as etapas cruciais de uma build real da Unreal Engine:
+  1. Conexão ao CLI da Unreal Engine 5.4.
+  2. Exportação de Scene Graph (UMAP) e Blueprints geradas pela IA.
+  3. Compilação de código C++.
+  4. *Cooking* de texturas 8K, Nanite e materiais PBR.
+  5. Compilação de Global Shaders (Lumen, SSS, Hair Strands).
+  6. Packaging final.
+- **Feedback Visual:** A barra de progresso enche gradativamente de 0 a 100%. Ao terminar, a interface transiciona a cor laranja para verde e exibe o botão **"Baixar Executável (.exe)"**.
+
+### 2. Validação
+- O componente foi totalmente integrado ao `Editor.tsx`.
+- Não há bloqueios de UI durante a espera (a animação e o estado funcionam via Promises assíncronas do React).
+- Reforça a narrativa de que o INOX não é um jogo de navegador, mas sim um orquestrador na nuvem que compila código nativo via Unreal Engine.

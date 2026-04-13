@@ -38,6 +38,9 @@ export default function Editor() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [showBuildModal, setShowBuildModal] = useState(false);
+  const [buildProgress, setBuildProgress] = useState(0);
+  const [buildLogs, setBuildLogs] = useState<string[]>([]);
+  const [buildComplete, setBuildComplete] = useState(false);
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
@@ -104,20 +107,51 @@ export default function Editor() {
   const handleBuildProject = async (platform: 'web' | 'desktop' | 'mobile') => {
     if (!currentProject?.id) return;
     
-    setIsBuilding(true);
     setShowBuildModal(false);
+    setIsBuilding(true);
+    setBuildProgress(0);
+    setBuildLogs([]);
+    setBuildComplete(false);
+    
     try {
-      setMessages(prev => [...prev, { role: 'assistant', content: `📦 Iniciando empacotamento para a plataforma **${platform.toUpperCase()}**...\n\nCompilando shaders e lógicas...` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `📦 Iniciando pipeline de Cloud Build para **${platform.toUpperCase()}**...` }]);
       
-      // Simulate build process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const addLog = (log: string, progress: number) => {
+        setBuildLogs(prev => [...prev, `[${new Date().toISOString().split('T')[1].split('.')[0]}] ${log}`]);
+        setBuildProgress(progress);
+      };
+
+      // Simulate Cloud Build Pipeline
+      await new Promise(r => setTimeout(r, 800));
+      addLog("Conectando ao Build Server (Unreal Engine 5.4 CLI)...", 5);
       
-      setMessages(prev => [...prev, { role: 'assistant', content: `✅ Build para **${platform.toUpperCase()}** concluída com sucesso!\n\nVocê pode baixar os binários no Dashboard.` }]);
+      await new Promise(r => setTimeout(r, 1200));
+      addLog("Exportando Scene Graph e Blueprints...", 15);
+      
+      await new Promise(r => setTimeout(r, 1500));
+      addLog("Compilando Lógica Blueprint para C++...", 30);
+      
+      await new Promise(r => setTimeout(r, 2000));
+      addLog("Cooking Content (Assets, Texturas 8K, Materials)...", 45);
+      
+      await new Promise(r => setTimeout(r, 1800));
+      addLog("Cooking Content (Geometry, Nanite Meshes)...", 60);
+      
+      await new Promise(r => setTimeout(r, 2500));
+      addLog("Compiling Global Shaders (Lumen, SSS, Hair Strands)...", 80);
+      
+      await new Promise(r => setTimeout(r, 1500));
+      addLog(`Packaging executável para plataforma alvo (${platform})...`, 95);
+      
+      await new Promise(r => setTimeout(r, 1000));
+      addLog("Gerando binários finais e link de download...", 100);
+      
+      setBuildComplete(true);
+      setMessages(prev => [...prev, { role: 'assistant', content: `✅ Build para **${platform.toUpperCase()}** concluída com sucesso!\n\nVocê já pode baixar o arquivo compilado.` }]);
     } catch (error) {
       console.error('Failed to build:', error);
+      setBuildLogs(prev => [...prev, `[ERRO FATAL] Falha no pipeline de Build: ${error}`]);
       setMessages(prev => [...prev, { role: 'assistant', content: "❌ Erro ao tentar empacotar o projeto." }]);
-    } finally {
-      setIsBuilding(false);
     }
   };
   const loadAssets = async () => {
@@ -748,6 +782,80 @@ export default function Editor() {
               >
                 Cancelar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Build Progress Modal */}
+      {isBuilding && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-orange-500" />
+                Unreal Engine Cloud Build Pipeline
+              </h2>
+              {buildComplete && (
+                <button 
+                  onClick={() => setIsBuilding(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <div className="w-5 h-5 flex items-center justify-center text-lg leading-none">&times;</div>
+                </button>
+              )}
+            </div>
+            
+            <div className="p-6 flex flex-col gap-6">
+              {/* Progress Bar */}
+              <div>
+                <div className="flex justify-between text-sm mb-2 font-mono">
+                  <span className="text-slate-300">Status do Empacotamento</span>
+                  <span className={buildComplete ? "text-green-400 font-bold" : "text-orange-400 animate-pulse"}>
+                    {buildProgress}%
+                  </span>
+                </div>
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${buildComplete ? 'bg-green-500' : 'bg-orange-500'}`}
+                    style={{ width: `${buildProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Terminal Logs */}
+              <div className="bg-[#0c0c0c] border border-slate-800 rounded-lg h-64 p-4 font-mono text-xs overflow-y-auto custom-scrollbar flex flex-col gap-1">
+                {buildLogs.map((log, i) => (
+                  <div key={i} className={`${
+                    log.includes('ERRO') ? 'text-red-500' :
+                    log.includes('✅') || log.includes('sucesso') ? 'text-green-400' :
+                    'text-slate-400'
+                  }`}>
+                    {log}
+                  </div>
+                ))}
+                {!buildComplete && (
+                  <div className="flex items-center gap-2 text-slate-500 mt-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Aguardando resposta do Worker...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Download Action */}
+              {buildComplete && (
+                <div className="flex justify-center pt-4">
+                  <button 
+                    onClick={() => {
+                      alert('Download iniciado! (Mock)');
+                      setIsBuilding(false);
+                    }}
+                    className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-lg transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] animate-in fade-in zoom-in duration-300"
+                  >
+                    <Download className="w-5 h-5" />
+                    Baixar Executável (.exe)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
