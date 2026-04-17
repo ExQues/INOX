@@ -1,57 +1,57 @@
-# React + TypeScript + Vite
+# INOX Game Creator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+INOX Game Creator é uma plataforma de desenvolvimento de jogos impulsionada por IA.
+Ela permite que usuários criem, editem e gerenciem projetos de jogos diretamente do navegador, integrando-se com motores gráficos e oferecendo uma experiência fluida para prototipação e desenvolvimento.
 
-Currently, two official plugins are available:
+## Funcionalidades Principais
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Dashboard de Projetos**: Gerencie seus projetos ativos, rascunhos e projetos arquivados.
+- **Desenvolvimento Guiado por IA**: SDKs de Inteligência Artificial integrados (OpenAI, Anthropic) para ajudar na criação de lógicas, assets e scripts.
+- **Integração com Motores**: Suporte e scripts utilitários para integração com a Unreal Engine e visualizações Web.
+- **Backend Escalável**: API Express com Supabase para autenticação e armazenamento de dados.
 
-## Expanding the ESLint configuration
+## Tecnologias Utilizadas
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Frontend
+- React 18
+- TypeScript
+- Vite
+- TailwindCSS
+- Zustand (Gerenciamento de Estado)
+- Three.js & Cannon.js (Para visualização e física web)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+### Backend
+- Node.js & Express
+- Supabase (Auth, Database, Storage)
+- Integrações de IA (OpenAI SDK, Anthropic SDK)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Como Rodar o Projeto
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Instale as dependências:
+   ```bash
+   npm install
+   ```
 
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+2. Configure as variáveis de ambiente baseadas no `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+   Preencha as chaves do Supabase e as APIs de IA necessárias.
+
+3. Inicie o ambiente de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+   Este comando inicia tanto o servidor frontend (Vite) quanto o backend (Express via Nodemon).
+
+## Estrutura do Projeto
+
+- `/src`: Código-fonte do frontend React.
+- `/api`: Servidor backend Express e rotas.
+- `/supabase`: Configurações e migrations do banco de dados.
+- `/ue_scripts`: Scripts para integração com Unreal Engine.
+- `/Source` & `/Config`: Arquivos de projeto da Unreal Engine (INOXSurvival).
+
+## Contribuição
+
+Para contribuir, crie uma branch, faça as alterações e abra um Pull Request detalhando suas modificações.

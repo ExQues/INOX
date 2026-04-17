@@ -79,7 +79,8 @@ async function generateWithAnthropic(
     ],
   });
 
-  return response.content[0].text;
+  const textBlock = response.content.find(block => block.type === 'text');
+  return textBlock && 'text' in textBlock ? textBlock.text : '';
 }
 
 function createGameGenerationSystemPrompt(
@@ -93,29 +94,33 @@ function createGameGenerationSystemPrompt(
     mobile: 'React Native, Unity, Godot',
   };
 
-  return `You are an expert game developer AI that generates complete, playable game code.
+  return `You are INOX, an expert AI game developer, architect, and engine programmer. Your goal is to generate modular, performant, and production-ready game code and logic.
 
 Platform: ${platform} (${platformSpecs[platform as keyof typeof platformSpecs]})
 ${genre ? `Genre: ${genre}` : ''}
 ${features ? `Features: ${features.join(', ')}` : ''}
 
-Rules:
-1. Generate COMPLETE, working code - no placeholders
-2. Include all necessary imports and setup
-3. Add comments explaining key systems
-4. Create modular, reusable components
-5. Implement basic gameplay mechanics (movement, collision, scoring)
-6. Include visual feedback (animations, particles)
-7. Make code production-ready (error handling, performance optimization)
-8. Return code in valid JSON format with file structure
+CRITICAL INSTRUCTIONS:
+- You must ONLY return a valid JSON object matching the exact structure requested.
+- DO NOT include markdown code blocks (like \`\`\`json) in your response. Just the raw JSON object.
+- NO explanatory text before or after the JSON.
+- If the user asks for "Unreal", "Blueprint", "Lógica AAA", or "Converter lógica JS em Blueprint", you MUST generate a JSON schema representing an Unreal Engine Blueprint (nodes, connections, variables). 
+  - The JSON MUST have a root key "blueprint_name" and a "nodes" array.
+  - Node types can include: "EventTick", "EventBeginPlay", "InputAction", "AddActorLocalOffset", "SetActorLocation", "Branch", etc.
+  - Put this schema as a stringified JSON inside the "main.json" key of the files object.
+- If the user asks for Web Sandbox logic or mechanics, you MUST generate functional JavaScript for a Three.js and Cannon-es environment.
+  - VERY IMPORTANT: DO NOT create primitive shapes (like BoxGeometry, SphereGeometry, CylinderGeometry) to represent the player or characters. 
+  - ALWAYS use the injected \`model\` variable as the player character (it is a high-quality GLTF model loaded externally).
+  - You have access to these injected variables: \`model\`, \`sceneObjects\`, \`physicsBodies\`, \`mixers\`, \`keys\`, \`camera\`, \`world\`, \`dt\`, \`THREE\`, \`CANNON\`.
+  - To move the main model, modify \`model.position\` or if it has a physics body, modify \`physicsBodies['preview_model'].velocity\`.
+  - For keyboard input, check \`if (keys['w']) { ... }\`.
+  - Do NOT wrap the generated code in a function declaration. Just provide the raw loop/setup code that will run inside an existing \`function(engine) { ... }\`.
 
 Output format:
 {
   "files": {
-    "index.html": "complete HTML",
-    "game.js": "complete game logic",
-    "styles.css": "complete styles",
-    "package.json": "dependencies"
+    "game.js": "complete game logic OR...",
+    "main.json": "{... blueprint schema if unreal ...}"
   },
   "assets": [
     {"name": "player.png", "type": "sprite", "url": "placeholder"}
@@ -376,6 +381,16 @@ Include:
 6. Power-up/upgrade system
 7. Particle effects for feedback
 
+Use Three.js and cannon-es for 3D mechanics. You have access to:
+- model (the main GLTF object if any)
+- sceneObjects (dictionary of loaded objects)
+- physicsBodies (dictionary of cannon-es bodies)
+- keys (dictionary of currently pressed keys, e.g., keys['w'])
+- mixers (dictionary of THREE.AnimationMixer)
+- camera (the THREE.PerspectiveCamera)
+- updateThirdPersonCamera(targetPosition, offset) (helper to make camera follow a player)
+- THREE, CANNON, world, dt
+
 Return as complete, modular code.`;
 
   return generateGameCode({
@@ -383,6 +398,69 @@ Return as complete, modular code.`;
     platform,
     operation: 'create',
   });
+}
+
+// --- 3D Generation Services (Pivot para Orquestração Quixel/AAA) ---
+
+export interface Generate3DOptions {
+  prompt: string;
+  style?: 'realistic' | 'stylized' | 'low-poly';
+}
+
+export interface Generated3DModel {
+  modelUrl: string;
+  thumbnailUrl?: string;
+  status: 'processing' | 'completed' | 'failed';
+  taskId: string;
+  isAAAAsset?: boolean;
+  assetId?: string;
+}
+
+// Simulating the AI deciding to search Megascans/MetaHumans instead of generating bad geometry
+export async function request3DModelGeneration(options: Generate3DOptions): Promise<Generated3DModel> {
+  console.log(`[AI Orchestrator] Analyzing prompt for AAA Asset: "${options.prompt}"`);
+  
+  // In a real scenario, the LLM would translate the prompt into Megascans tags and query the Quixel API
+  // e.g., if prompt has "floresta", search for "rock", "tree", "fern" in Quixel DB.
+  
+  // Returning a mock task ID for the orchestration task
+  return {
+    taskId: `orchestration_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    status: 'processing',
+    modelUrl: '',
+  };
+}
+
+// Simulating polling the task status and returning a high-quality pre-existing asset proxy
+export async function check3DModelStatus(taskId: string, prompt?: string): Promise<Generated3DModel> {
+  console.log(`[AI Orchestrator] Retrieving AAA Asset Proxy for task: ${taskId}`);
+  
+  // Simulate network delay for DB search
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Use a mix of Khronos sample models based on the prompt
+  let proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF/FlightHelmet.gltf';
+  let assetId = 'Megascans_Prop_v1';
+
+  const p = prompt ? prompt.toLowerCase() : '';
+  if (p.includes('personagem') || p.includes('humano') || p.includes('soldado') || p.includes('herói') || p.includes('andando')) {
+    proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf';
+    assetId = 'MetaHuman_Soldier_v1';
+  } else if (p.includes('carro') || p.includes('veículo')) {
+    proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf'; // Fallback
+    assetId = 'Megascans_Vehicle_v1';
+  } else if (p.includes('mapa') || p.includes('terreno') || p.includes('plano')) {
+    proxyUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf'; // Fallback for map
+    assetId = 'Megascans_Terrain_v1';
+  }
+
+  return {
+    taskId,
+    status: 'completed',
+    isAAAAsset: true,
+    assetId: assetId, // Identifier for Unreal Engine to download the real 8K asset
+    modelUrl: proxyUrl,
+  };
 }
 
 initializeAiClients();

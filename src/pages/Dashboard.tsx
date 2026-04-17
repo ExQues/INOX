@@ -1,24 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Plus, Gamepad2, FolderOpen, Zap, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Gamepad2, FolderOpen, Zap, Clock, TrendingUp, Monitor, Box, Smartphone, GitCommit, Download, LogOut } from 'lucide-react';
+import { getProjects, createProject, supabase } from '../lib/supabase';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user, projects, setProjects, setCurrentProject, setLoading, setError } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+
+  useEffect(() => {
+    async function loadProjects() {
+      setIsLoadingProjects(true);
+      try {
+        const data = await getProjects();
+        setProjects(data as any);
+      } catch (err) {
+        console.error('Erro ao carregar projetos:', err);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    }
+    loadProjects();
+  }, [setProjects]);
 
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateNewProject = () => {
-    setCurrentProject(null);
+  const handleCreateNewProject = async () => {
+    try {
+      setLoading(true);
+      const newProject = await createProject({
+        name: 'Novo Jogo ' + Math.floor(Math.random() * 1000),
+        platform: 'web',
+      });
+      setCurrentProject(newProject as any);
+      navigate('/editor');
+    } catch (err) {
+      console.error('Erro ao criar projeto:', err);
+      alert('Não foi possível criar o projeto. Verifique sua conexão.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenProject = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     if (project) {
       setCurrentProject(project);
+      navigate('/editor');
     }
   };
 
@@ -26,6 +59,11 @@ export default function Dashboard() {
     totalProjects: projects.length,
     activeProjects: projects.filter((p) => p.status === 'active').length,
     recentProjects: projects.slice(0, 5),
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
   };
 
   return (
@@ -49,9 +87,16 @@ export default function Dashboard() {
                   {user?.full_name?.[0] || user?.email?.[0] || 'U'}
                 </div>
                 <div className="hidden sm:block">
-                  <p className="text-sm font-medium">{user?.full_name || 'Usuário'}</p>
+                  <p className="text-sm font-medium">{user?.full_name || user?.email?.split('@')[0] || 'Usuário'}</p>
                   <p className="text-xs text-slate-400">{user?.plan === 'free' ? 'Plano Free' : user?.plan === 'pro' ? 'Plano Pro' : 'Plano Enterprise'}</p>
                 </div>
+                <button 
+                  onClick={handleLogout}
+                  className="ml-2 p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 transition-colors border border-transparent hover:border-slate-700"
+                  title="Sair"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
 
               <button
@@ -133,7 +178,12 @@ export default function Dashboard() {
             />
           </div>
 
-          {filteredProjects.length === 0 ? (
+          {isLoadingProjects ? (
+            <div className="text-center py-16">
+              <div className="w-12 h-12 mx-auto mb-4 border-4 border-purple-500/50 border-t-purple-500 animate-spin rounded-full"></div>
+              <p className="text-slate-400">Carregando seus projetos...</p>
+            </div>
+          ) : filteredProjects.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-slate-800/50 backdrop-blur-sm flex items-center justify-center">
                 <FolderOpen className="w-10 h-10 text-slate-600" />
@@ -158,17 +208,27 @@ export default function Dashboard() {
                 <div
                   key={project.id}
                   onClick={() => handleOpenProject(project.id)}
-                  className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 cursor-pointer"
+                  className="group bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 cursor-pointer flex flex-col min-h-[260px] overflow-hidden relative"
                 >
-                  <div className="flex items-start justify-between mb-4">
+                  {/* Decorative Background for project card */}
+                  <div className="absolute inset-0 opacity-10 bg-gradient-to-br from-purple-500/30 to-transparent pointer-events-none" />
+
+                  <div className="p-6 flex flex-col flex-1 relative z-10">
+                    <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                        <Gamepad2 className="w-6 h-6 text-white" />
+                        {project.platform === 'desktop' ? (
+                          <Box className="w-6 h-6 text-white" />
+                        ) : project.platform === 'mobile' ? (
+                          <Smartphone className="w-6 h-6 text-white" />
+                        ) : (
+                          <Monitor className="w-6 h-6 text-white" />
+                        )}
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold">{project.name}</h3>
                         <p className="text-sm text-slate-400">
-                          {project.platform === 'web' ? 'Web' : project.platform === 'desktop' ? 'Desktop' : 'Mobile'}
+                          {project.platform === 'web' ? 'Web (HTML5)' : project.platform === 'desktop' ? 'Desktop (PC/Mac)' : 'Mobile'}
                         </p>
                       </div>
                     </div>
@@ -183,20 +243,34 @@ export default function Dashboard() {
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      {project.genre && (
-                        <span className="px-3 py-1 text-xs font-medium rounded-lg bg-purple-600/20 text-purple-400">
-                          {project.genre}
-                        </span>
+                  <div className="flex items-center justify-between mt-auto pt-4">
+                    <div className="flex items-center gap-3">
+                      {project.commits && project.commits.length > 0 && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/50 border border-slate-700/50 text-xs font-medium text-slate-300" title={`${project.commits.length} snapshots salvos`}>
+                          <GitCommit className="w-3.5 h-3.5 text-purple-400" />
+                          {project.commits.length}
+                        </div>
                       )}
-                      <span className="text-sm text-slate-400">
-                        {new Date(project.created_at).toLocaleDateString('pt-BR')}
+                      <span className="text-xs text-slate-500 font-mono">
+                        {new Date(project.updated_at || project.created_at).toLocaleDateString('pt-BR')}
                       </span>
                     </div>
-                    <button className="px-4 py-2 bg-purple-600 rounded-lg font-medium hover:bg-purple-700 transition-colors duration-200">
-                      Abrir
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          alert('Nenhuma build disponível para download ainda. Abra o projeto e clique em Exportar.');
+                        }}
+                        className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-blue-400 transition-colors duration-200"
+                        title="Baixar Build"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button className="px-4 py-2 bg-purple-600 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors duration-200 shadow-lg shadow-purple-900/20">
+                        Abrir
+                      </button>
+                    </div>
+                  </div>
                   </div>
                 </div>
               ))}

@@ -1,10 +1,17 @@
 import { Request, Response } from 'express';
-import { generateGameCode } from '../services/aiService';
-import { createProject, getProject, updateProject, createAiConversation, updateAiConversation } from '../services/supabaseService';
-import { uploadAssetToStorage } from '../services/assetService';
-import { deployGame } from '../services/deployService';
+import { generateGameCode, request3DModelGeneration, check3DModelStatus } from '../services/aiService';
+import { createProject, getProject, updateProject, createAiConversation, updateAiConversation, getAiConversation } from '../services/supabaseService';
+import { uploadAsset } from '../services/assetService';
+import { deployGame, getBuildStatus } from '../services/deployService';
+import { invokeUnrealBridge } from '../services/unrealService';
 
-export const createAiProject = async (req: Request, res: Response) => {
+// Add type for req.user and req.file
+interface CustomRequest extends Request {
+  user?: { id: string };
+  file?: any;
+}
+
+export const createAiProject = async (req: CustomRequest, res: Response) => {
   try {
     const { name, description, platform, aiPrompt, templateId, genre, features } = req.body;
     const userId = req.user?.id || 'ai-agent';
@@ -36,14 +43,12 @@ export const createAiProject = async (req: Request, res: Response) => {
       createdAt: project.created_at,
       updatedAt: project.updated_at,
     });
-  } catch (error: {
-    message: string;
-  }) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const generateCode = async (req: Request, res: Response) => {
+export const generateCode = async (req: CustomRequest, res: Response) => {
   try {
     const { projectId, prompt, model, templateId } = req.body;
 
@@ -61,12 +66,14 @@ export const generateCode = async (req: Request, res: Response) => {
     });
 
     await updateProject(projectId, {
+      id: projectId,
       code_structure: generated.code,
     });
 
     const conversation = await getAiConversation(projectId);
     if (conversation) {
       await updateAiConversation(conversation.id, {
+        id: conversation.id,
         messages: [
           ...conversation.messages,
           { role: 'user', content: prompt },
@@ -81,12 +88,12 @@ export const generateCode = async (req: Request, res: Response) => {
       explanation: generated.explanation,
       tokensUsed: generated.tokensUsed,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const modifyCode = async (req: Request, res: Response) => {
+export const modifyCode = async (req: CustomRequest, res: Response) => {
   try {
     const { projectId, currentCode, modificationRequest, filePath } = req.body;
 
@@ -97,7 +104,7 @@ export const modifyCode = async (req: Request, res: Response) => {
 
     const modified = await generateGameCode({
       prompt: `Modify the following code: ${modificationRequest}`,
-      currentCode,
+      platform: project.platform,
       context: currentCode,
       operation: 'modify',
     });
@@ -109,7 +116,8 @@ export const modifyCode = async (req: Request, res: Response) => {
     }));
 
     await updateProject(projectId, {
-      codeStructure: modified.code,
+      id: projectId,
+      code_structure: modified.code,
     });
 
     res.json({
@@ -117,38 +125,61 @@ export const modifyCode = async (req: Request, res: Response) => {
       changes,
       explanation: modified.explanation,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const chatWithAi = async (req: Request, res: Response) => {
+export const chatWithAi = async (req: CustomRequest, res: Response) => {
   try {
-    const { projectId, message, conversationHistory } = req.body;
+    const { projectId, message, conversationHistory, currentCode, consoleErrors } = req.body;
 
     const project = await getProject(projectId);
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    let contextualPrompt = message;
+    if (currentCode) {
+      contextualPrompt += `\n\n[CONTEXT] Current Code:\n\`\`\`javascript\n${currentCode}\n\`\`\``;
+    }
+    if (consoleErrors && consoleErrors.length > 0) {
+      contextualPrompt += `\n\n[CONTEXT] Console Errors:\n${consoleErrors.join('\n')}`;
+    }
+
     const response = await generateGameCode({
-      prompt: message,
-      context: project.codeStructure,
+      prompt: contextualPrompt,
+      platform: project.platform,
+      context: project.code_structure,
       conversationHistory,
       operation: 'chat',
     });
+
+    // Extract the main file content if it exists to be injected directly
+    let activeCode = '';
+    if (response.code && Object.keys(response.code).length > 0) {
+      // Prioritize main.json (Blueprint) or main.js or index.js
+      const mainFile = Object.keys(response.code).find(f => f.includes('main.json') || f.includes('main') || f.includes('index'));
+      activeCode = mainFile ? response.code[mainFile] : response.code[Object.keys(response.code)[0]];
+      
+      // If it's a JSON string, we might want to keep it as string for the editor
+      if (typeof activeCode === 'object') {
+        activeCode = JSON.stringify(activeCode, null, 2);
+      }
+    }
 
     res.json({
       response: response.explanation,
       codeSnippets: response.codeSnippets || [],
       suggestedActions: response.suggestedActions || [],
+      activeCode: activeCode || undefined
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const uploadAiAsset = async (req: Request, res: Response) => {
+export const uploadAiAsset = async (req: CustomRequest, res: Response) => {
   try {
     const { projectId, type, tags } = req.body;
     const file = req.file;
@@ -160,7 +191,8 @@ export const uploadAiAsset = async (req: Request, res: Response) => {
     const asset = await uploadAsset({
       projectId,
       userId: req.user?.id || 'ai-agent',
-      file,
+      file: file.buffer,
+      filename: file.originalname || `upload_${Date.now()}.asset`,
       type,
       tags: tags || [],
     });
@@ -171,12 +203,12 @@ export const uploadAiAsset = async (req: Request, res: Response) => {
       thumbnailUrl: asset.thumbnailUrl,
       size: asset.size,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const deployAiGame = async (req: Request, res: Response) => {
+export const deployAiGame = async (req: CustomRequest, res: Response) => {
   try {
     const { projectId, platform, buildConfig, environment } = req.body;
 
@@ -191,24 +223,27 @@ export const deployAiGame = async (req: Request, res: Response) => {
       platform,
       buildConfig: buildConfig || {},
       environment: environment || 'production',
-      codeStructure: project.codeStructure,
+      codeStructure: project.code_structure,
     });
 
     res.json({
       buildId: deploy.id,
       status: deploy.status,
-      estimatedTime: deploy.estimatedTime || 120,
+      estimatedTime: 120, // hardcoded since deploy.estimatedTime doesn't exist
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const getAiBuildStatus = async (req: Request, res: Response) => {
+export const getAiBuildStatus = async (req: CustomRequest, res: Response) => {
   try {
     const { buildId } = req.params;
 
     const status = await getBuildStatus(buildId);
+    if (!status) {
+      return res.status(404).json({ error: 'Build not found' });
+    }
 
     res.json({
       buildId: status.id,
@@ -217,34 +252,35 @@ export const getAiBuildStatus = async (req: Request, res: Response) => {
       logs: status.logs || [],
       deployUrl: status.buildUrl,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const createGameFromPrompt = async (req: Request, res: Response) => {
+export const createGameFromPrompt = async (req: CustomRequest, res: Response) => {
   try {
     const { description, name, platform, genre, features } = req.body;
 
     const project = await createProject({
-      userId: req.user?.id || 'ai-agent',
+      user_id: req.user?.id || 'ai-agent',
       name: name || 'AI Generated Game',
       description,
       platform: platform || 'web',
       status: 'active',
-      codeStructure: {},
+      code_structure: {},
     });
 
     const generated = await generateGameCode({
       prompt: description,
-      platform,
+      platform: platform || 'web',
       genre,
       features,
       operation: 'create',
     });
 
     await updateProject(project.id, {
-      codeStructure: generated.code,
+      id: project.id,
+      code_structure: generated.code,
     });
 
     res.json({
@@ -254,18 +290,15 @@ export const createGameFromPrompt = async (req: Request, res: Response) => {
       assets: generated.assets,
       explanation: generated.explanation,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: (error as Error).message });
   }
 };
 
-import { invokeUnrealBridge } from '../services/unrealService';
-
-export const generateUnrealMap = async (req: Request, res: Response) => {
+export const generateUnrealMap = async (req: CustomRequest, res: Response) => {
   try {
     const { prompt, density, time_of_day, assets } = req.body;
     
-    // Config JSON that maps constraints to what the Python bridge expects
     const config = {
       name: `GeneratedMap_${Date.now()}`,
       biome: prompt || "Unknown",
@@ -277,7 +310,6 @@ export const generateUnrealMap = async (req: Request, res: Response) => {
 
     console.log('[UnrealMapController] Sending config to Unreal Engine...', config);
     
-    // Invoke the Unreal Engine interface (Python headless script/RemoteControl)
     const result = await invokeUnrealBridge(config);
 
     res.json({
@@ -286,7 +318,190 @@ export const generateUnrealMap = async (req: Request, res: Response) => {
       unrealOutput: result.output,
       message: 'Ambiente realista instanciado na Unreal Engine.'
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: (error as Error).message });
+  }
+};
+
+export const syncProjectToUnreal = async (req: CustomRequest, res: Response) => {
+  try {
+    const { projectId } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const project = await getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const sceneGraph = project.scene_graph || [];
+
+    // Formata o grafo da cena no formato UMAP/JSON esperado pela Unreal Engine
+    const unrealSceneObjects = sceneGraph.map((obj: any) => {
+      // O Three.js usa Right-Handed Y-up
+      // A Unreal Engine usa Left-Handed Z-up
+      // Essa conversão também é feita no ai_bridge.py, mas enviar dados limpos facilita o log
+      return {
+        id: obj.id,
+        name: obj.name || "UnknownMesh",
+        asset_id: obj.assetId || "Generic_Mesh",
+        url: obj.url || "",
+        position: {
+          x: obj.position[0],
+          y: obj.position[1],
+          z: obj.position[2]
+        },
+        rotation: {
+          x: obj.rotation[0],
+          y: obj.rotation[1],
+          z: obj.rotation[2]
+        },
+        scale: {
+          x: obj.scale[0],
+          y: obj.scale[1],
+          z: obj.scale[2]
+        }
+      };
+    });
+
+    const config = {
+      name: project.name || `SyncMap_${Date.now()}`,
+      action: 'sync_scene',
+      scene_objects: unrealSceneObjects,
+      code_structure: project.code_structure, // Injeta o código/blueprint atual para o bridge ler
+      create_new_map: false,
+      export_version: '1.0.0',
+      timestamp: new Date().toISOString()
+    };
+
+    console.log(`[UnrealMapController] Sincronizando projeto ${projectId} com Unreal Engine...`);
+    console.log(`[UnrealMapController] Exportando ${unrealSceneObjects.length} objetos para formato UMAP/JSON.`);
+
+    const result = await invokeUnrealBridge(config);
+
+    res.json({
+      success: true,
+      unrealOutput: result.output,
+      message: 'Cena sincronizada com sucesso na Unreal Engine 5.'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const saveProjectScene = async (req: CustomRequest, res: Response) => {
+  try {
+    const { projectId, sceneObjects, activeCode, commits } = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const updatedProject = await updateProject(projectId, {
+      id: projectId,
+      scene_graph: sceneObjects,
+      code_structure: activeCode,
+      commits: commits
+    });
+
+    res.json({
+      success: true,
+      project: updatedProject,
+      message: 'Scene and logic saved successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getProjectAssets = async (req: CustomRequest, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    const assets = await getAssetsByProject(projectId);
+
+    res.json({
+      success: true,
+      assets: assets,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const generate3DModel = async (req: CustomRequest, res: Response) => {
+  try {
+    const { prompt, style, projectId } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required to save the generated asset' });
+    }
+
+    // Pass projectId as part of the task metadata if needed by the service
+    const task = await request3DModelGeneration({ prompt, style });
+    
+    res.json({
+      success: true,
+      taskId: task.taskId,
+      status: task.status,
+      message: '3D model generation started'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+import { downloadAndSaveGeneratedModel, getAssetsByProject } from '../services/assetService.js';
+
+export const get3DModelStatus = async (req: CustomRequest, res: Response) => {
+  try {
+    const { taskId } = req.params;
+    const { projectId, prompt } = req.query; // Expecting these from frontend to know where to save
+
+    if (!taskId) {
+      return res.status(400).json({ error: 'Task ID is required' });
+    }
+
+    const status = await check3DModelStatus(taskId, prompt as string);
+
+    // Se o modelo foi concluído com sucesso e temos o contexto do projeto, salvamos no banco
+    if (status.status === 'completed' && status.modelUrl && projectId && prompt) {
+      try {
+        const userId = req.user?.id || 'ai-agent';
+        console.log(`[AssetService] Downloading and saving model for project ${projectId}...`);
+        
+        const savedAsset = await downloadAndSaveGeneratedModel(
+          status.modelUrl,
+          projectId as string,
+          userId,
+          prompt as string
+        );
+
+        // Retornamos a URL permanente do Supabase em vez da URL temporária da IA
+        status.modelUrl = savedAsset.url;
+      } catch (saveError) {
+        console.error('Failed to save asset to Supabase, falling back to temp URL:', saveError);
+      }
+    }
+
+    res.json({
+      success: true,
+      taskId: status.taskId,
+      status: status.status,
+      modelUrl: status.modelUrl,
+      thumbnailUrl: status.thumbnailUrl
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 };

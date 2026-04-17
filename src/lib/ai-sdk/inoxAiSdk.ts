@@ -6,6 +6,7 @@ export interface GameConfig {
   features?: string[];
   aiPrompt?: string;
   templateId?: string;
+  model?: 'gpt-4' | 'gpt-3.5-turbo' | 'claude-3-opus' | 'claude-3-sonnet';
 }
 
 export interface ProjectResponse {
@@ -60,6 +61,8 @@ export interface ChatRequest {
     role: 'user' | 'assistant';
     content: string;
   }>;
+  currentCode?: string | null;
+  consoleErrors?: string[];
 }
 
 export interface ChatResponse {
@@ -70,6 +73,7 @@ export interface ChatResponse {
     description: string;
   }>;
   suggestedActions?: string[];
+  activeCode?: string;
 }
 
 export interface AssetUploadRequest {
@@ -84,6 +88,55 @@ export interface AssetUploadResponse {
   url: string;
   thumbnailUrl: string;
   size: number;
+}
+
+export interface Generate3DModelRequest {
+  prompt: string;
+  projectId: string;
+  style?: 'realistic' | 'stylized' | 'low-poly';
+}
+
+export interface Generate3DModelResponse {
+  success: boolean;
+  taskId: string;
+  status: 'processing' | 'completed' | 'failed';
+  message: string;
+}
+
+export interface Get3DModelStatusResponse {
+  success: boolean;
+  taskId: string;
+  status: 'processing' | 'completed' | 'failed';
+  modelUrl?: string;
+  thumbnailUrl?: string;
+}
+
+export interface SaveSceneRequest {
+  projectId: string;
+  sceneObjects: any[];
+  activeCode: string | null;
+  commits?: any[];
+}
+
+export interface SaveSceneResponse {
+  success: boolean;
+  project: any;
+  message: string;
+}
+export interface GetProjectAssetsResponse {
+  success: boolean;
+  assets: Array<{
+    id: string;
+    projectId: string;
+    userId: string;
+    name: string;
+    type: string;
+    url: string;
+    thumbnailUrl?: string;
+    size: number;
+    tags: string[];
+    createdAt: string;
+  }>;
 }
 
 export interface DeployRequest {
@@ -251,25 +304,73 @@ export class InoxAiSdk {
     throw new Error('Build timeout');
   }
 
-  async createGameFromDescription(
-    description: string,
-    options: Partial<GameConfig> = {}
-  ): Promise<{ project: ProjectResponse; code: CodeGenerationResponse }> {
-    const project = await this.createProject({
-      name: options.name || 'AI Generated Game',
-      description: description,
-      platform: options.platform || 'web',
-      aiPrompt: description,
-      ...options,
+  async getProjectAssets(projectId: string): Promise<GetProjectAssetsResponse> {
+    return this.request<GetProjectAssetsResponse>(`/api/ai/assets/${projectId}`, {
+      method: 'GET',
     });
+  }
 
-    const code = await this.generateCode({
-      projectId: project.projectId,
-      prompt: description,
-      model: options.model,
+  async saveProjectScene(request: SaveSceneRequest): Promise<SaveSceneResponse> {
+    return this.request<SaveSceneResponse>('/api/ai/save-scene', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
+  }
 
-    return { project, code };
+  async syncProjectToUnreal(projectId: string): Promise<any> {
+    return this.request<any>('/api/ai/sync-unreal', {
+      method: 'POST',
+      body: JSON.stringify({ projectId }),
+    });
+  }
+
+  async generateUnrealMap(prompt: string, density: string = 'high', timeOfDay: string = 'day'): Promise<any> {
+    return this.request<any>('/api/ai/generate-unreal-map', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, density, time_of_day: timeOfDay }),
+    });
+  }
+
+  async generate3DModel(request: Generate3DModelRequest): Promise<Generate3DModelResponse> {
+    return this.request<Generate3DModelResponse>('/api/ai/generate-3d', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async get3DModelStatus(taskId: string, projectId?: string, prompt?: string): Promise<Get3DModelStatusResponse> {
+    const query = new URLSearchParams();
+    if (projectId) query.append('projectId', projectId);
+    if (prompt) query.append('prompt', prompt);
+    
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    
+    return this.request<Get3DModelStatusResponse>(`/api/ai/generate-3d/${taskId}${queryString}`, {
+      method: 'GET',
+    });
+  }
+
+  async waitFor3DModel(
+    taskId: string,
+    projectId: string,
+    prompt: string,
+    pollInterval: number = 2000,
+    maxAttempts: number = 30
+  ): Promise<Get3DModelStatusResponse> {
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const status = await this.get3DModelStatus(taskId, projectId, prompt);
+
+      if (status.status === 'completed' || status.status === 'failed') {
+        return status;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      attempts++;
+    }
+
+    throw new Error('3D generation timeout');
   }
 }
 
